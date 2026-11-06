@@ -1,69 +1,208 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Footer from "@/components/layout/Footer";
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Plus } from "lucide-react";
+import Image from "next/image";
+import { signIn } from "next-auth/react";
+
+export default function Login() {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+  const handleSubmit = async (formData: FormData) => {
+    setIsLoading(true);
+    setErrorMessage(null);
+
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setErrorMessage(result.error);
+      setIsLoading(false);
+    } else if (result?.ok) {
+      router.push("/dashboard");
+      router.refresh();
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="flex min-h-screen flex-col bg-background">
+      <header className="z-50 sticky top-0 flex h-17.5 shrink-0 items-center border-b border-foreground/5 bg-white/80 px-5 shadow-low backdrop-blur md:h-13 md:px-6">
+        <div className="mr-2 flex size-9 items-center justify-center rounded-lg bg-primary text-white">
+          {/* Ikon logo klinik */}
+          <Plus aria-hidden="true" size={22} strokeWidth={2.5} />
+        </div>
+
+        <div className="leading-tight">
+          <p className="text-sm font-bold text-foreground">KlinikPulse SIM</p>
+          <p className="text-[9px] font-medium tracking-wide text-foreground/65">
+            PORTAL STAF &amp; MANAJEMEN
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </header>
+
+      <main
+        className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 py-4 md:py-8"
+        style={{
+          backgroundImage:
+            "radial-gradient(ellipse at 50% 48%, rgba(0, 200, 179, 0.13), transparent 34%), radial-gradient(ellipse at 36% 45%, rgba(0, 192, 99, 0.10), transparent 28%)",
+        }}
+      >
+        <section
+          aria-labelledby="login-title"
+          className="relative z-10 w-full max-w-92.5 rounded-xl bg-white px-7 py-8 shadow-high sm:px-10 sm:py-9"
+        >
+          <h1
+            id="login-title"
+            className="text-[22px] font-bold tracking-tight sm:text-2xl"
           >
+            Masuk Portal Staf
+          </h1>
+          <p className="mt-1 text-sm text-foreground/70">
+            Silakan masukkan kredensial resmi faskes Anda untuk mengakses sistem
+            ERM &amp; SIM Klinik.
+          </p>
+
+          <form className="mt-5 space-y-3" action={handleSubmit}>
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-1 block text-xs font-semibold"
+              >
+                Email
+              </label>
+              <div className="flex h-11 items-center gap-3 rounded-lg bg-[#f7f0ff] px-3 text-foreground/70 focus-within:ring-2 focus-within:ring-primary/40">
+                {/* Ikon email */}
+                <Mail aria-hidden="true" size={16} />
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="Contoh: ari@gmail.com"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/40"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-1 block text-xs font-semibold"
+              >
+                Kata Sandi
+              </label>
+              <div className="flex h-11 items-center gap-3 rounded-lg bg-[#f7f0ff] px-3 text-foreground/70 focus-within:ring-2 focus-within:ring-primary/40">
+                {/* Ikon kata sandi */}
+                <LockKeyhole aria-hidden="true" size={16} />
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  placeholder="••••••••••••"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-foreground/40"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="shrink-0"
+                  aria-label={
+                    showPassword
+                      ? "Sembunyikan kata sandi"
+                      : "Tampilkan kata sandi"
+                  }
+                >
+                  {showPassword ? (
+                    <Eye aria-hidden="true" size={16} />
+                  ) : (
+                    <EyeOff aria-hidden="true" size={16} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-0.5 text-xs">
+              <label className="flex items-center gap-2 text-foreground/75">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  className="size-4 accent-primary"
+                />
+                Ingat perangkat (30 hari)
+              </label>
+              <a
+                href="#"
+                className="shrink-0 font-semibold text-[#008d4c] hover:underline"
+              >
+                Lupa Kata Sandi?
+              </a>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-white shadow-mid transition hover:bg-[#00aa58] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+              {/* Tombol masuk */}
+              <ArrowRight aria-hidden="true" size={16} />
+              {isLoading ? "Memproses..." : "Masuk ke Dashboard"}
+            </button>
+          </form>
+
+          <div className="my-5 flex items-center gap-3">
+            <span className="h-px flex-1 bg-[#eadcff]" />
+            <span className="text-[9px] font-semibold tracking-widest text-foreground/65">
+              ATAU VERIFIKASI ALTERNATIF
+            </span>
+            <span className="h-px flex-1 bg-[#eadcff]" />
+          </div>
+
+          <button
+            type="button"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#eee5f7] bg-[#f7f0ff] px-3 text-xs font-semibold transition hover:bg-[#efe4fc]"
+          >
+            {/* Ikon SSO (pengganti huruf G) */}
             <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
+              src="https://www.vectorlogo.zone/logos/google/google-icon.svg"
+              alt="Google"
               width={16}
-              height={14}
+              height={16}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Login dengan Google
+          </button>
+        </section>
+
+        <p className="relative z-10 mt-4 flex items-center gap-1.5 text-xs text-foreground/75">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            fill="none"
+            className="size-4"
           >
-            Documentation
-          </a>
-        </div>
+            <path
+              d="M4 13v-2a8 8 0 0 1 16 0v2m-16 0v4h4v-6H4m16 2v4h-4v-6h4m-4 4c0 2-1.5 3-4 3"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          Kendala akun? IT Helpdesk Ext. 1044
+        </p>
       </main>
+
+      <Footer />
     </div>
   );
 }
