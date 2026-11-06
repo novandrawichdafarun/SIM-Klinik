@@ -1,0 +1,181 @@
+# Panduan Kontribusi SIM-Klinik
+
+Terima kasih telah berkontribusi pada proyek SIM-Klinik. Ikuti panduan ini agar perubahan mudah ditinjau dan konsisten.
+
+---
+
+# Panduan Instalasi
+
+Ikuti langkah-langkah di bawah ini secara berurutan untuk menjalankan proyek di komputer lokal Anda.
+
+### 1. Persyaratan Sistem
+
+Sebelum memulai, pastikan perangkat Anda telah menginstal hal-hal berikut:
+
+- Node.js 18 atau versi yang lebih baru
+- npm, pnpm, yarn, atau bun
+- Laragon (untuk menjalankan server lokal MySQL)
+- Git (untuk mengakses repositori)
+
+### 2. Clone Repository dan Instal Dependensi
+
+Buka terminal, lalu jalankan perintah berikut:
+
+```bash
+git clone https://github.com/novandrawichdafarun/sistem-informasi-tuberkulosis.git
+cd sistem-informasi-tuberkulosis
+npm install
+```
+
+### 3. Konfigurasi Local Environment (.env.local)
+
+Buat file `.env.local` berdasarkan template yang tersedia:
+
+- Jika menggunakan Linux/macOS/WSL:
+
+```bash
+cp .env.example .env.local
+```
+
+- Jika menggunakan Windows (PowerShell):
+
+```powershell
+copy .env.example .env.local
+```
+
+Setelah file dibuat, isi nilai konfigurasi berikut:
+
+```env
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=root
+MYSQL_PASSWORD=
+MYSQL_DATABASE=nutbcare_db_local
+```
+
+Jika file `.env.example` belum tersedia, buat file `.env.local` secara manual dan isi variabel di atas sesuai konfigurasi project tim Anda.
+
+### 4. Hubungkan Database MySQL ke Local
+
+Pastikan MySQL berjalan di komputer Anda. Gunakan Laragon atau server MySQL lokal lainnya. Buat database baru dengan nama `nutbcare_db_local` (atau sesuai konfigurasi di `.env.local`).
+
+Jalankan Laragon, buka terminal MySQL, dan buat database dengan mengimport file SQL yang tersedia di folder `database/`:
+
+```bash
+mysql -u root -p
+create database nutbcare_db_local;
+use nutbcare_db_local;
+
+source database/schema-mysql.sql;
+```
+
+atau gunakan GUI seperti phpMyAdmin atau MySQL Workbench untuk mengimpor file SQL.
+
+### 5. Jalankan Aplikasi
+
+Setelah semua konfigurasi selesai, jalankan aplikasi dengan perintah berikut:
+
+```bash
+npm run dev
+# atau
+yarn dev
+# atau
+pnpm dev
+# atau
+bun dev
+```
+
+Buka [http://localhost:3000](http://localhost:3000) pada peramban (browser).
+
+---
+
+## 🧑‍💻 Style Coding (Gaya Penulisan)
+
+Untuk menjaga konsistensi kode dan kualitas pengembangan, ikuti pedoman berikut.
+
+1. Bahasa Pemrograman
+   - Gunakan TypeScript untuk fitur baru.
+   - Hindari penggunaan kode JavaScript mentah jika fitur dapat ditulis dengan TypeScript.
+
+2. Penamaan
+   - Folder App Router: gunakan kebab-case
+     - Contoh: medical-records, patient-history
+   - Komponen React: gunakan PascalCase
+     - Contoh: PatientTable, MedicationForm
+   - Variabel dan fungsi: gunakan camelCase
+     - Contoh: patientName, fetchPatientData
+   - Konstanta: gunakan UPPER_SNAKE_CASE
+     - Contoh: API_BASE_URL
+
+3. Struktur Kode
+   - Buat komponen yang kecil, fokus, dan mudah dipahami.
+   - Hindari logika yang terlalu panjang dalam satu fungsi.
+   - Gunakan interface atau type untuk struktur data.
+   - Hindari penggunaan any pada tipe data.
+
+4. Format Kode
+   - Gunakan Prettier untuk format kode otomatis.
+   - Gunakan ESLint untuk mendeteksi kesalahan sintaks dan praktik buruk.
+   - Jalankan formatter dan linter sebelum melakukan commit:
+
+   ```bash
+   npm run lint
+   npm run format
+   ```
+
+5. Server Compoennts
+   - Gunakan Server Component secara default di Next.js.
+   - Gunakan `"use client"` hanya jika benar-benar dibutuhkan, misalnya untuk interaksi UI.
+
+---
+
+## 📏 Peraturan Pengembangan
+
+1. Branching
+   Setiap fitur atau perbaikan sebaiknya dibuat pada branch yang terpisah.
+
+   ```bash
+    git checkout -b feat/fitur-baru
+   ```
+
+2. Commit Message
+   Gunakan format commit yang jelas dan konsisten:
+
+   ```bash
+    git commit -m "feat: tambah modul riwayat obat"
+    git commit -m "fix: perbaiki validasi form pasien"
+    git commit -m "chore: update dokumentasi README"
+   ```
+
+3. Pull Request
+   - Jangan langsung push ke branch main.
+   - Setiap perubahan wajib dibuat Pull Request.
+   - PR wajib ditinjau bersama sebelum merge.
+
+4. Keamanan
+   - Jangan pernah menyimpan secret, token, atau kredensial di dalam repository.
+   - Gunakan `.env.local` untuk konfigurasi lokal.
+   - Jangan membagikan file `.env.local` ke publik atau ke pihak yang tidak berwenang.
+
+5. Database
+   - Semua perubahan skema database harus didokumentasikan.
+   - Jangan mengubah struktur tabel secara sepihak tanpa memberitahu tim dan tanpa file kueri.
+   - Semua perubahan atau penambahan tabel baru harus tercatat dan disimpan di folder /database.
+
+---
+
+## Pelaporan masalah
+
+Saat membuat issue, sertakan langkah untuk mereproduksi masalah, hasil yang diharapkan, hasil aktual, serta tangkapan layar atau pesan error jika tersedia.
+
+---
+
+## ⚠️ Peringatan Penting
+
+- Data pasien merupakan data sensitif. Jangan membagikan informasi pribadi pasien di forum, issue, pull request, atau media komunikasi lain yang tidak aman.
+- Jangan pernah mengunggah file `.env.local`, `.env`, token, atau kredensial lain ke repository GitHub.
+- Hindari menggunakan library atau modul yang tidak terverifikasi atau tidak memiliki lisensi yang jelas.
+- Setiap perubahan skema database wajib disertai migrasi yang terdokumentasi dan dilakukan melalui review yang tepat.
+- Pastikan untuk melakukan `git pull` sebelum memulai pengembangan guna menghindari konflik integrasi dan memastikan Anda bekerja pada versi proyek terbaru.
+- Sebelum mengirimkan Pull Request, pastikan fitur telah diuji secara lokal dan tidak menimbulkan regresi pada sistem.
+- Jangan melakukan perubahan pada file atau modul yang terkait dengan otorisasi, autentikasi, atau data pasien tanpa pemahaman yang memadai terhadap dampaknya.
