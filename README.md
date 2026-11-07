@@ -49,7 +49,7 @@ Penjelasan singkat
 
 Skema database dikelola menggunakan sistem relasional MySQL. Semua perubahan struktur tabel didokumentasikan melalui file kueri SQL.
 
-![ERD Sistem TB](docs/ERD.png)
+![ERD Sistem TB](docs/ERD/ERM-Klinik.png)
 
 Relasi Inti:
 
@@ -61,4 +61,3 @@ Aturan Umum Schema:
 - Tambahkan indeks (KEY atau INDEX) pada kolom yang sering dipakai untuk memfilter atau menggabungkan (join) tabel.
 
 ---
-

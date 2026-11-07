@@ -16,7 +16,7 @@ export const loginUserService = async (
     const pool = getMySQLPool();
 
     const [userRows] = await pool.execute<RowDataPacket[]>({
-      sql: `SELECT id_user, email, password_hash, role
+      sql: `SELECT id_user, email, password, role
          FROM users WHERE email = ? LIMIT 1`,
       values: [email],
     });
@@ -28,7 +28,7 @@ export const loginUserService = async (
       };
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return {
         success: false,
@@ -232,7 +232,7 @@ export const ResetPassword = async (
     try {
       await conn.beginTransaction();
       await conn.execute({
-        sql: "UPDATE users SET password_hash = ? WHERE email = ?",
+        sql: "UPDATE users SET password = ? WHERE email = ?",
         values: [hashedPassword, email],
       });
       await conn.execute({

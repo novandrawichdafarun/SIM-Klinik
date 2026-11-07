@@ -6,7 +6,7 @@ import { Compass, ArrowLeft, MapPinOff } from "lucide-react";
 export default async function NotFoundView() {
   const session = await getServerSession(authOptions);
 
-  const targetUrl = session ? "/dashboard" : "/login";
+  const targetUrl = session ? "/dashboard" : "/";
   const buttonText = session ? "Kembali ke Beranda" : "Kembali ke Login";
 
   return (
