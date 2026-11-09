@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Footer from "@/components/layout/Footer";
+import Footer from "@/components/layouts/Footer";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Plus } from "lucide-react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";

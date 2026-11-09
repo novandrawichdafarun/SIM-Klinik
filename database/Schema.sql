@@ -18,9 +18,9 @@ DROP TABLE IF EXISTS `users`;
 SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE `users` (
-  `id_user` CHAR(36) NOT NULL,
+  `id_user` CHAR(36) NOT NULL DEFAULT (LOWER(UUID())),
   `email` VARCHAR(254) NOT NULL,
-  `password` VARCHAR(255) NOT NULL COMMENT 'Simpan password hash, bukan password asli',
+  `password` VARCHAR(255) NOT NULL,
   `role` VARCHAR(20) NOT NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -43,7 +43,7 @@ CREATE TABLE `password_resets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `user_sessions` (
-  `id` CHAR(36) NOT NULL,
+  `id` CHAR(36) NOT NULL DEFAULT (LOWER(UUID())),
   `id_user` CHAR(36) NOT NULL,
   `session_token` CHAR(64) NOT NULL COMMENT 'Simpan hash token sesi',
   `device_info` VARCHAR(500) NULL,
