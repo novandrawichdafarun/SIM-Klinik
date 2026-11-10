@@ -8,7 +8,7 @@ function SessionGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (session?.error === "ForceLogout") {
-      signOut({ callbackUrl: "/login", redirect: true });
+      signOut({ callbackUrl: "/", redirect: true });
     }
   }, [session]);
 

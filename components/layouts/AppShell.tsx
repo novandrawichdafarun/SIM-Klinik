@@ -8,7 +8,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#fbf8f3] font-sans text-[#242039]">
+    <div className="min-h-screen bg-background font-sans text-ink">
       <Sidebar menuOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
       <div className="lg:ml-55">

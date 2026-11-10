@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Footer from "@/components/layouts/Footer";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Plus } from "lucide-react";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
@@ -37,7 +38,7 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <header className="z-50 sticky top-0 flex h-17.5 shrink-0 items-center border-b border-foreground/5 bg-white/80 px-5 shadow-low backdrop-blur md:h-13 md:px-6">
+      <header className="z-50 sticky top-0 flex h-17.5 shrink-0 items-center border-b border-foreground/5 bg-surface/80 px-5 shadow-low backdrop-blur md:h-13 md:px-6">
         <div className="mr-2 flex size-9 items-center justify-center rounded-lg bg-primary text-white">
           {/* Ikon logo klinik */}
           <Plus aria-hidden="true" size={22} strokeWidth={2.5} />
@@ -49,6 +50,8 @@ export default function Login() {
             PORTAL STAF &amp; MANAJEMEN
           </p>
         </div>
+
+        <ThemeToggle className="ml-auto" />
       </header>
 
       <main
@@ -60,7 +63,7 @@ export default function Login() {
       >
         <section
           aria-labelledby="login-title"
-          className="relative z-10 w-full max-w-92.5 rounded-xl bg-white px-7 py-8 shadow-high sm:px-10 sm:py-9"
+          className="relative z-10 w-full max-w-92.5 rounded-xl bg-surface px-7 py-8 shadow-high sm:px-10 sm:py-9"
         >
           <h1
             id="login-title"
@@ -81,7 +84,7 @@ export default function Login() {
               >
                 Email
               </label>
-              <div className="flex h-11 items-center gap-3 rounded-lg bg-[#f7f0ff] px-3 text-foreground/70 focus-within:ring-2 focus-within:ring-primary/40">
+              <div className="flex h-11 items-center gap-3 rounded-lg bg-surface-muted px-3 text-foreground/70 focus-within:ring-2 focus-within:ring-primary/40">
                 {/* Ikon email */}
                 <Mail aria-hidden="true" size={16} />
                 <input
@@ -102,7 +105,7 @@ export default function Login() {
               >
                 Kata Sandi
               </label>
-              <div className="flex h-11 items-center gap-3 rounded-lg bg-[#f7f0ff] px-3 text-foreground/70 focus-within:ring-2 focus-within:ring-primary/40">
+              <div className="flex h-11 items-center gap-3 rounded-lg bg-surface-muted px-3 text-foreground/70 focus-within:ring-2 focus-within:ring-primary/40">
                 {/* Ikon kata sandi */}
                 <LockKeyhole aria-hidden="true" size={16} />
                 <input
@@ -143,21 +146,21 @@ export default function Login() {
               </label>
               <a
                 href="#"
-                className="shrink-0 font-semibold text-[#008d4c] hover:underline"
+                className="shrink-0 font-semibold text-accent-ink hover:underline"
               >
                 Lupa Kata Sandi?
               </a>
             </div>
 
             {errorMessage && (
-              <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3">
+              <div className="flex items-center gap-2 rounded-lg bg-danger-soft p-3">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={1.75}
-                  className="h-5 w-5 shrink-0 text-red-500"
+                  className="h-5 w-5 shrink-0 text-danger-ink"
                 >
                   <path
                     strokeLinecap="round"
@@ -165,7 +168,7 @@ export default function Login() {
                     d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
                   />
                 </svg>
-                <p className="text-sm text-red-600">{errorMessage}</p>
+                <p className="text-sm text-danger-ink">{errorMessage}</p>
               </div>
             )}
 
@@ -181,16 +184,16 @@ export default function Login() {
           </form>
 
           <div className="my-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-[#eadcff]" />
+            <span className="h-px flex-1 bg-line" />
             <span className="text-[9px] font-semibold tracking-widest text-foreground/65">
               ATAU VERIFIKASI ALTERNATIF
             </span>
-            <span className="h-px flex-1 bg-[#eadcff]" />
+            <span className="h-px flex-1 bg-line" />
           </div>
 
           <button
             type="button"
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#eee5f7] bg-[#f7f0ff] px-3 text-xs font-semibold transition hover:bg-[#efe4fc]"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface-muted px-3 text-xs font-semibold transition hover:bg-surface-hover"
           >
             {/* Ikon SSO (pengganti huruf G) */}
             <Image
