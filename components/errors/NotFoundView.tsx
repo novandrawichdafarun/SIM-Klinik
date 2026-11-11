@@ -2,8 +2,10 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { Compass, ArrowLeft, MapPinOff } from "lucide-react";
+import { connection } from "next/server";
 
 export default async function NotFoundView() {
+  await connection; // Ensure the database connection is established
   const session = await getServerSession(authOptions);
 
   const targetUrl = session ? "/dashboard" : "/";
