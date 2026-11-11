@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -9,6 +9,7 @@ import {
   FileBarChart,
   FileText,
   HandCoins,
+  IdCard,
   KeyRound,
   LayoutDashboard,
   Shield,
@@ -16,91 +17,164 @@ import {
   Wallet,
   X,
   type LucideIcon,
+  Star,
+  ReceiptText,
 } from "lucide-react";
 import Brand from "../assets/Brand";
+import { getAksesMenuAction, type AksesMenu } from "@/actions/menu";
 
-type NavLink = { name: string; href: string; icon: LucideIcon };
-type NavGroup = { label: string; links: NavLink[]; superAdminOnly?: boolean };
+/**
+ * Aturan tampil menu (harus sama dengan pengecekan di halaman/server action):
+ *  - "semua"      : setiap akun yang login
+ *  - "superAdmin" : hanya Pimpinan Klinik / Super Admin
+ *  - fitur[]      : Super Admin, atau akun yang dicentang "Lihat" salah satu fitur di Hak Akses
+ * Menyembunyikan menu hanya untuk tampilan; pengamanan tetap di proxy.ts & server action.
+ */
+type Aturan = "semua" | "superAdmin" | (keyof AksesMenu["lihat"])[];
+type NavLink = { name: string; href: string; icon: LucideIcon; akses: Aturan };
+type NavGroup = { label: string; links: NavLink[] };
 
 const navGroups: NavGroup[] = [
   {
     label: "MENU",
+    links: [{ name: "Dashboard Utama", href: "/dashboard", icon: LayoutDashboard, akses: "semua" }],
+  },
+  {
+    label: "PASIEN",
     links: [
-      { name: "Dashboard Utama", href: "/dashboard", icon: LayoutDashboard },
+      {
+        name: "Rekap Data Pasien",
+        href: "/rekap-pasien",
+        icon: IdCard,
+        akses: ["rekap_pasien", "input_pasien"],
+      },
     ],
   },
   {
-    // Hanya Pimpinan Klinik / Super Admin. Ini sekadar menyembunyikan menu;
-    // pengamanan sesungguhnya ada di proxy.ts dan setiap server action.
-    label: "SDM",
-    superAdminOnly: true,
+    // Data pribadi karyawan (termasuk Pimpinan Klinik yang juga menangani pasien)
+    label: "SAYA",
     links: [
-      { name: "Kelola Karyawan", href: "/karyawan", icon: UsersRound },
-      { name: "Kelola Akun", href: "/akun", icon: KeyRound },
-      { name: "Hak Akses", href: "/hak-akses", icon: Shield },
+      { name: "Kinerja Saya", href: "/kinerja-saya", icon: Star, akses: "semua" },
+      { name: "Jasa Pelayanan Saya", href: "/jasa-pelayanan", icon: Wallet, akses: "semua" },
+    ],
+  },
+  {
+    label: "SDM",
+    links: [
+      { name: "Kelola Karyawan", href: "/karyawan", icon: UsersRound, akses: "superAdmin" },
+      { name: "Kelola Akun", href: "/akun", icon: KeyRound, akses: "superAdmin" },
+      { name: "Hak Akses", href: "/hak-akses", icon: Shield, akses: "superAdmin" },
     ],
   },
   {
     label: "LAYANAN",
     links: [
-      { name: "Tarif Jasa Pelayanan", href: "#", icon: HandCoins },
-      { name: "Katalog Layanan", href: "/katalog-layanan", icon: ClipboardList },
-      { name: "Laporan Layanan", href: "/laporan-layanan", icon: FileBarChart },
+      { name: "Tarif Jasa Pelayanan", href: "/tarif-jasa", icon: HandCoins, akses: "superAdmin" },
+      {
+        name: "Katalog Layanan",
+        href: "/katalog-layanan",
+        icon: ClipboardList,
+        akses: "superAdmin",
+      },
+      {
+        name: "Laporan Layanan",
+        href: "/laporan-layanan",
+        icon: FileBarChart,
+        akses: "superAdmin",
+      },
     ],
   },
   {
     label: "KEUANGAN",
     links: [
-      { name: "Verifikasi Reimburse", href: "#", icon: Wallet },
-      { name: "Laporan Keuangan", href: "#", icon: FileText },
+      {
+        name: "Invoice Digital",
+        href: "/invoice-digital",
+        icon: ReceiptText,
+        akses: ["invoice_digital"],
+      },
+      { name: "Verifikasi Reimburse", href: "#", icon: Wallet, akses: ["reimburse"] },
+      { name: "Laporan Keuangan", href: "#", icon: FileText, akses: ["arus_kas"] },
     ],
   },
 ];
 
-function NavList({
-  pathname,
-  onNavigate,
-}: {
-  pathname: string | null;
-  onNavigate?: () => void;
-}) {
+function boleh(aturan: Aturan, akses: AksesMenu | null): boolean {
+  if (aturan === "semua") return true;
+  if (!akses) return false; // belum dimuat → sembunyikan dulu
+  if (akses.isSuperAdmin) return true;
+  if (aturan === "superAdmin") return false;
+  return aturan.some((f) => akses.lihat[f]);
+}
+
+/** Cache per akun selama tab terbuka, supaya menu tidak berkedip tiap pindah halaman */
+const cacheAkses = new Map<string, AksesMenu>();
+
+function useAksesMenu(): AksesMenu | null {
   const { data: session } = useSession();
-  const isSuperAdmin = session?.user?.role === "super_admin";
+  const userId = session?.user?.id;
+  const [state, setState] = useState<{ userId: string; akses: AksesMenu } | null>(null);
+
+  useEffect(() => {
+    if (!userId) return;
+    let batal = false;
+    // Selalu ambil ulang di latar belakang: perubahan Hak Akses langsung terlihat
+    getAksesMenuAction()
+      .catch(() => null)
+      .then((akses) => {
+        if (batal || !akses) return;
+        cacheAkses.set(userId, akses);
+        setState({ userId, akses });
+      });
+    return () => {
+      batal = true;
+    };
+  }, [userId]);
+
+  if (!userId) return null;
+  if (state?.userId === userId) return state.akses;
+  return cacheAkses.get(userId) ?? null;
+}
+
+function NavList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
+  const akses = useAksesMenu();
+  // Grup tanpa menu yang boleh dibuka ikut disembunyikan
+  const groups = navGroups
+    .map((g) => ({ ...g, links: g.links.filter((l) => boleh(l.akses, akses)) }))
+    .filter((g) => g.links.length > 0);
 
   return (
     <nav className="py-2" aria-label="Menu utama">
-      {navGroups
-        .filter((group) => !group.superAdminOnly || isSuperAdmin)
-        .map((group) => (
-          <section className="mt-3" key={group.label}>
-            <p className="px-4 pb-1.5 text-[10px] font-bold tracking-wide text-ink-3">
-              {group.label}
-            </p>
-            {group.links.map(({ name, href, icon: Icon }) => {
-              const active =
-                pathname !== null &&
-                href !== "#" &&
-                (pathname === href || pathname.startsWith(`${href}/`));
+      {groups.map((group) => (
+        <section className="mt-3" key={group.label}>
+          <p className="px-4 pb-1.5 text-[10px] font-bold tracking-wide text-ink-3">
+            {group.label}
+          </p>
+          {group.links.map(({ name, href, icon: Icon }) => {
+            const active =
+              pathname !== null &&
+              href !== "#" &&
+              (pathname === href || pathname.startsWith(`${href}/`));
 
-              return (
-                <Link
-                  key={name}
-                  href={href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={`mx-1 flex h-8.5 items-center gap-2.5 rounded-md px-3 text-[12px] ${
-                    active
-                      ? "bg-emerald-500 text-white font-semibold"
-                      : "text-ink-3 hover:bg-surface-hover"
-                  }`}
-                >
-                  <Icon aria-hidden="true" size={14} strokeWidth={1.8} />
-                  {name}
-                </Link>
-              );
-            })}
-          </section>
-        ))}
+            return (
+              <Link
+                key={name}
+                href={href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={`mx-1 flex h-8.5 items-center gap-2.5 rounded-md px-3 text-[12px] ${
+                  active
+                    ? "bg-emerald-500 text-white font-semibold"
+                    : "text-ink-3 hover:bg-surface-hover"
+                }`}
+              >
+                <Icon aria-hidden="true" size={14} strokeWidth={1.8} />
+                {name}
+              </Link>
+            );
+          })}
+        </section>
+      ))}
     </nav>
   );
 }
@@ -118,13 +192,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-export default function Sidebar({
-  menuOpen,
-  onClose,
-}: {
-  menuOpen: boolean;
-  onClose: () => void;
-}) {
+export default function Sidebar({ menuOpen, onClose }: { menuOpen: boolean; onClose: () => void }) {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-55 border-r border-line bg-surface lg:block">

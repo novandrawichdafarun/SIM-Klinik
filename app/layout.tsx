@@ -3,6 +3,10 @@ import { Inter } from "next/font/google";
 import "@/styles/globals.css";
 import AuthProvider from "@/components/auth/AuthProvider";
 import ThemeProvider from "@/components/theme/ThemeProvider";
+import { Suspense } from "react";
+import FlashToast from "@/components/feedback/FlashToast";
+import KonfirmasiHost from "@/components/feedback/KonfirmasiHost";
+import Toaster from "@/components/feedback/Toaster";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,6 +27,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>
+          {/* Feedback global: toast otomatis, dialog konfirmasi, pesan setelah redirect */}
+          <Toaster />
+          <KonfirmasiHost />
+          <Suspense fallback={null}>
+            <FlashToast />
+          </Suspense>
         </ThemeProvider>
       </body>
     </html>

@@ -73,6 +73,44 @@ export function generateNip(idKaryawan: number): string {
   return `KRY-${String(idKaryawan).padStart(4, "0")}`;
 }
 
+/** Kode layanan otomatis dari idLayanan: 7 → "LYN-007". Sama dengan format di Seed.sql. */
+export function generateKodeLayanan(idLayanan: number): string {
+  return `LYN-${String(idLayanan).padStart(3, "0")}`;
+}
+
+/** No. RM otomatis dari idPasien: 89255 → "RM-089255" */
+export function generateNoRM(idPasien: number): string {
+  return `RM-${String(idPasien).padStart(6, "0")}`;
+}
+
+/** "3174052309920003" → "3174••••••••0003" */
+export function maskNik(nik: string): string {
+  return nik.length === 16 ? `${nik.slice(0, 4)}${"•".repeat(8)}${nik.slice(-4)}` : nik;
+}
+
+const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+
+/** "2026-11-02" → "Senin, 02 Nov 2026" */
+export function formatHariTanggal(yyyyMmDd: string): string {
+  const [y, m, d] = yyyyMmDd.split("-").map(Number);
+  const hari = HARI[new Date(y, m - 1, d).getDay()];
+  return `${hari}, ${formatTanggal(yyyyMmDd)}`;
+}
+
+/** Umur dalam tahun dari tanggal lahir YYYY-MM-DD */
+export function hitungUsia(tanggalLahir: string | null, today = new Date()): number | null {
+  if (!tanggalLahir) return null;
+  const [y, m, d] = tanggalLahir.split("-").map(Number);
+  let usia = today.getFullYear() - y;
+  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) usia--;
+  return usia;
+}
+
+/** Tanggal hari ini (zona waktu server) dalam format YYYY-MM-DD */
+export function hariIni(now = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 export const JABATAN_PIMPINAN = "Pimpinan Klinik";
 
 /** Jabatan Pimpinan Klinik selalu memakai akun Super Admin */
@@ -83,4 +121,34 @@ export function isJabatanPimpinan(jenisKaryawan: string | null | undefined): boo
 /** Jabatan berawalan "Dokter" / "dr." / "drg." dianggap dokter (punya rating & rekam medis) */
 export function isJabatanDokter(jenisKaryawan: string | null | undefined): boolean {
   return /^(dokter|dr\.?|drg\.?)\b/i.test((jenisKaryawan ?? "").trim());
+}
+
+/** 160000 → "Rp 160.000" */
+export function formatRupiah(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return `Rp ${Math.round(value).toLocaleString("id-ID")}`;
+}
+
+const BULAN_PANJANG = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+/** "2026-10" → "Oktober 2026" */
+export function labelBulanTahun(yyyyMm: string): string {
+  const [y, m] = yyyyMm.split("-");
+  return `${BULAN_PANJANG[Number(m) - 1] ?? m} ${y}`;
+}
+
+/**
+ * Kategori jabatan untuk tarif jasa pelayanan:
+ * dokter (termasuk Pimpinan Klinik yang juga dokter Poli Umum) atau perawat/bidan.
+ * Jabatan lain (administrasi, kasir, dll.) tidak mendapat jasa pelayanan.
+ */
+export function kategoriJabatanJasa(
+  jenisKaryawan: string | null | undefined,
+): "dokter" | "perawat" | null {
+  if (isJabatanDokter(jenisKaryawan) || isJabatanPimpinan(jenisKaryawan)) return "dokter";
+  if (/perawat|bidan/i.test(jenisKaryawan ?? "")) return "perawat";
+  return null;
 }

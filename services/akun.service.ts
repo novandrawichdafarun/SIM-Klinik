@@ -6,6 +6,8 @@ import { ActionResponse } from "@/types/action";
 import type { Akun, AkunListParams } from "@/types/akun";
 import type { UserRole } from "@/types/auth";
 import type { CreateAkunInput, UpdateAkunInput } from "@/schemas/akun.schema";
+import type { MatriksHakAkses } from "@/types/hak-akses";
+import { normalisasiIzin } from "./hak-akses.service";
 import { handleServiceError } from "@/utils/error";
 import { isJabatanPimpinan } from "@/utils/format";
 import { isMySQLDuplicateError, mysqlTransaction } from "@/utils/mysql";
@@ -78,9 +80,7 @@ export const getAkunListService = async ({
   }
 };
 
-export const getAkunByIdService = async (
-  idUser: string,
-): Promise<ActionResponse<Akun>> => {
+export const getAkunByIdService = async (idUser: string): Promise<ActionResponse<Akun>> => {
   try {
     const pool = getMySQLPool();
     const [rows] = await pool.execute<RowDataPacket[]>({
@@ -96,6 +96,8 @@ export const getAkunByIdService = async (
 
 export const createAkunService = async (
   input: CreateAkunInput,
+  hakAksesAwal: MatriksHakAkses = {},
+  actorIdUser: string | null = null,
 ): Promise<ActionResponse<{ idUser: string }>> => {
   try {
     const hashedPassword = await bcrypt.hash(input.password, 10);
@@ -114,21 +116,46 @@ export const createAkunService = async (
         throw new AkunError("Karyawan nonaktif tidak dapat dibuatkan akun.");
       }
 
+      // Pimpinan Klinik selalu Super Admin, apa pun pilihan di form
+      const role = isJabatanPimpinan(karyawan.jenisKaryawan) ? "super_admin" : input.role;
+
       await conn.execute({
         sql: `INSERT INTO users (id_user, email, password, role, is_active)
               VALUES (?, ?, ?, ?, TRUE)`,
-        // Pimpinan Klinik selalu Super Admin, apa pun pilihan di form
-        values: [
-          idUser,
-          input.email,
-          hashedPassword,
-          isJabatanPimpinan(karyawan.jenisKaryawan) ? "super_admin" : input.role,
-        ],
+        values: [idUser, input.email, hashedPassword, role],
       });
       await conn.execute({
         sql: "UPDATE karyawan SET id_user = ? WHERE idKaryawan = ?",
         values: [idUser, input.idKaryawan],
       });
+
+      // Hak akses awal (default role yang sudah disesuaikan Super Admin).
+      // Super Admin tidak perlu baris hak_akses; fitur khusus Super Admin diabaikan.
+      if (role !== "super_admin") {
+        const [fiturRows] = await conn.query<RowDataPacket[]>(
+          "SELECT kodeFitur FROM fitur WHERE khususSuperAdmin = FALSE",
+        );
+        const rows = fiturRows
+          .map(({ kodeFitur }) => ({ kodeFitur, izin: normalisasiIzin(hakAksesAwal[kodeFitur]) }))
+          .filter(({ izin }) => izin.lihat)
+          .map(({ kodeFitur, izin }) => [
+            idUser,
+            kodeFitur,
+            izin.lihat,
+            izin.tambah,
+            izin.ubah,
+            izin.hapus,
+            actorIdUser,
+          ]);
+        if (rows.length > 0) {
+          await conn.query(
+            `INSERT INTO hak_akses
+               (id_user, kodeFitur, bisaLihat, bisaTambah, bisaUbah, bisaHapus, diubahOleh)
+             VALUES ?`,
+            [rows],
+          );
+        }
+      }
     });
 
     return { success: true, data: { idUser }, message: "Akun berhasil dibuat." };
@@ -148,9 +175,7 @@ export const updateAkunService = async (
 ): Promise<ActionResponse> => {
   try {
     const isSelf = idUser === actorIdUser;
-    const hashedPassword = input.password
-      ? await bcrypt.hash(input.password, 10)
-      : null;
+    const hashedPassword = input.password ? await bcrypt.hash(input.password, 10) : null;
 
     await mysqlTransaction(async (conn) => {
       const [rows] = await conn.execute<RowDataPacket[]>({
@@ -187,8 +212,7 @@ export const updateAkunService = async (
       });
 
       // Keluarkan paksa dari semua perangkat bila akses berubah (kecuali akun sendiri)
-      const aksesBerubah =
-        !input.isActive || role !== current.role || hashedPassword !== null;
+      const aksesBerubah = !input.isActive || role !== current.role || hashedPassword !== null;
       if (aksesBerubah && !isSelf) {
         await conn.execute({
           sql: "DELETE FROM user_sessions WHERE id_user = ?",

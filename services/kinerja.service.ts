@@ -6,6 +6,7 @@ import type {
   NilaiBulanan,
   PeriodeKinerja,
   RatingDokterStats,
+  RiwayatDitangani,
 } from "@/types/kinerja";
 import { handleServiceError } from "@/utils/error";
 
@@ -22,15 +23,21 @@ export function buatPeriode(bulan: number, now = new Date()): PeriodeKinerja {
 }
 
 /** Isi bulan yang tidak punya data dengan null supaya sumbu grafik tetap lengkap */
-function lengkapiBulan(
-  daftarBulan: string[],
-  rows: RowDataPacket[],
-): NilaiBulanan[] {
+function lengkapiBulan(daftarBulan: string[], rows: RowDataPacket[]): NilaiBulanan[] {
   const map = new Map(rows.map((r) => [r.bulan as string, Number(r.nilai)]));
   return daftarBulan.map((bulan) => ({ bulan, nilai: map.get(bulan) ?? null }));
 }
 
 const ER_NO_SUCH_TABLE = 1146;
+
+/** Rating per karyawan: nilai dokter & nilai perawat dari setiap penilaian kunjungan */
+const RATING_KARYAWAN = `(
+  SELECT idRating, idDokter AS idKaryawan, nilaiDokter AS nilai, ulasan, created_at
+    FROM rating_kunjungan
+  UNION ALL
+  SELECT idRating, idPerawat, nilaiPerawat, ulasan, created_at
+    FROM rating_kunjungan WHERE idPerawat IS NOT NULL
+) rk`;
 
 const RATING_KOSONG = (periode: PeriodeKinerja): RatingDokterStats => ({
   rataRata: null,
@@ -41,7 +48,7 @@ const RATING_KOSONG = (periode: PeriodeKinerja): RatingDokterStats => ({
 });
 
 /**
- * Statistik rating dokter dari tabel `rating_dokter`.
+ * Statistik rating karyawan (dokter atau perawat) dari tabel `rating_kunjungan`.
  * Selama fitur rating pengunjung belum berjalan, tabel kosong → semua nilai kosong.
  */
 export const getRatingDokterService = async (
@@ -52,38 +59,37 @@ export const getRatingDokterService = async (
     const pool = getMySQLPool();
     const values = [idDokter, periode.mulai];
 
-    const [[ringkasan], [distribusiRows], [bulananRows], [ulasanRows]] =
-      await Promise.all([
-        pool.execute<RowDataPacket[]>({
-          sql: `SELECT AVG(nilai) AS rataRata, COUNT(*) AS jumlah
-                  FROM rating_dokter
-                 WHERE idDokter = ? AND created_at >= ?`,
-          values,
-        }),
-        pool.execute<RowDataPacket[]>({
-          sql: `SELECT nilai, COUNT(*) AS jumlah
-                  FROM rating_dokter
-                 WHERE idDokter = ? AND created_at >= ?
+    const [[ringkasan], [distribusiRows], [bulananRows], [ulasanRows]] = await Promise.all([
+      pool.execute<RowDataPacket[]>({
+        sql: `SELECT AVG(nilai) AS rataRata, COUNT(*) AS jumlah
+                  FROM ${RATING_KARYAWAN}
+                 WHERE idKaryawan = ? AND created_at >= ?`,
+        values,
+      }),
+      pool.execute<RowDataPacket[]>({
+        sql: `SELECT nilai, COUNT(*) AS jumlah
+                  FROM ${RATING_KARYAWAN}
+                 WHERE idKaryawan = ? AND created_at >= ?
                  GROUP BY nilai`,
-          values,
-        }),
-        pool.execute<RowDataPacket[]>({
-          sql: `SELECT DATE_FORMAT(created_at, '%Y-%m') AS bulan, AVG(nilai) AS nilai
-                  FROM rating_dokter
-                 WHERE idDokter = ? AND created_at >= ?
+        values,
+      }),
+      pool.execute<RowDataPacket[]>({
+        sql: `SELECT DATE_FORMAT(created_at, '%Y-%m') AS bulan, AVG(nilai) AS nilai
+                  FROM ${RATING_KARYAWAN}
+                 WHERE idKaryawan = ? AND created_at >= ?
                  GROUP BY bulan`,
-          values,
-        }),
-        pool.execute<RowDataPacket[]>({
-          sql: `SELECT idRating, nilai, ulasan, created_at
-                  FROM rating_dokter
-                 WHERE idDokter = ? AND created_at >= ?
+        values,
+      }),
+      pool.execute<RowDataPacket[]>({
+        sql: `SELECT idRating, nilai, ulasan, created_at
+                  FROM ${RATING_KARYAWAN}
+                 WHERE idKaryawan = ? AND created_at >= ?
                    AND ulasan IS NOT NULL AND TRIM(ulasan) <> ''
                  ORDER BY created_at DESC
                  LIMIT 4`,
-          values,
-        }),
-      ]);
+        values,
+      }),
+    ]);
 
     const distribusi: RatingDokterStats["distribusi"] = [0, 0, 0, 0, 0];
     for (const row of distribusiRows) {
@@ -123,21 +129,23 @@ export const getKinerjaDokterService = async (
 ): Promise<ActionResponse<KinerjaDokter>> => {
   try {
     const pool = getMySQLPool();
-    const values = [idDokter, periode.mulai];
+    // Ditangani = dokter penanggung jawab yang sudah mengisi diagnosa, atau perawat pemeriksa
+    const DITANGANI = "((rm.idDokter = ? AND rm.diagnosa IS NOT NULL) OR rm.idPerawat = ?)";
+    const values = [idDokter, idDokter, periode.mulai];
 
     const [[totalRows], [bulananRows], [layananRows]] = await Promise.all([
       pool.execute<RowDataPacket[]>({
         sql: `SELECT COUNT(*) AS total
                 FROM rekam_medis rm
                 JOIN kunjungan kj ON kj.idKunjungan = rm.idKunjungan
-               WHERE rm.idDokter = ? AND kj.tglKunjungan >= ?`,
+               WHERE ${DITANGANI} AND kj.tglKunjungan >= ?`,
         values,
       }),
       pool.execute<RowDataPacket[]>({
         sql: `SELECT DATE_FORMAT(kj.tglKunjungan, '%Y-%m') AS bulan, COUNT(*) AS nilai
                 FROM rekam_medis rm
                 JOIN kunjungan kj ON kj.idKunjungan = rm.idKunjungan
-               WHERE rm.idDokter = ? AND kj.tglKunjungan >= ?
+               WHERE ${DITANGANI} AND kj.tglKunjungan >= ?
                GROUP BY bulan`,
         values,
       }),
@@ -145,8 +153,9 @@ export const getKinerjaDokterService = async (
         sql: `SELECT l.namaLayanan, COUNT(*) AS jumlah
                 FROM rekam_medis rm
                 JOIN kunjungan kj ON kj.idKunjungan = rm.idKunjungan
-                JOIN layanan l ON l.idLayanan = kj.idLayanan
-               WHERE rm.idDokter = ? AND kj.tglKunjungan >= ?
+                JOIN kunjungan_layanan kl ON kl.idKunjungan = kj.idKunjungan
+                JOIN layanan l ON l.idLayanan = kl.idLayanan
+               WHERE ${DITANGANI} AND kj.tglKunjungan >= ?
                GROUP BY l.idLayanan, l.namaLayanan
                ORDER BY jumlah DESC
                LIMIT 5`,
@@ -170,5 +179,54 @@ export const getKinerjaDokterService = async (
     };
   } catch (err) {
     return handleServiceError(err, "Terjadi kesalahan saat mengambil kinerja dokter.");
+  }
+};
+
+/**
+ * Kunjungan terakhir yang ditangani karyawan pada periode: sebagai dokter penanggung jawab
+ * (sudah didiagnosa) atau perawat pemeriksa. Diagnosa hanya dikirim bila `denganDiagnosa`.
+ */
+export const getRiwayatDitanganiService = async (
+  idKaryawan: number,
+  periode: PeriodeKinerja,
+  denganDiagnosa: boolean,
+): Promise<ActionResponse<RiwayatDitangani[]>> => {
+  try {
+    const [rows] = await getMySQLPool().query<RowDataPacket[]>(
+      `SELECT kj.idKunjungan, kj.kodeKunjungan, DATE_FORMAT(kj.tglKunjungan, '%Y-%m-%d') AS tanggal,
+              p.idPasien, p.namaLengkap AS namaPasien, p.NoRM, po.namaPoli, rm.diagnosa,
+              IF(rm.idDokter = ? AND rm.diagnosa IS NOT NULL, 'dokter', 'perawat') AS peran,
+              COALESCE(
+                (SELECT GROUP_CONCAT(l2.namaLayanan ORDER BY kl.idKunjunganLayanan SEPARATOR ', ')
+                   FROM kunjungan_layanan kl JOIN layanan l2 ON l2.idLayanan = kl.idLayanan
+                  WHERE kl.idKunjungan = kj.idKunjungan),
+                '-') AS namaLayanan
+         FROM rekam_medis rm
+         JOIN kunjungan kj ON kj.idKunjungan = rm.idKunjungan
+         JOIN pasien p ON p.idPasien = kj.idPasien
+         JOIN poli po ON po.idPoli = kj.idPoli
+        WHERE ((rm.idDokter = ? AND rm.diagnosa IS NOT NULL) OR rm.idPerawat = ?)
+          AND kj.tglKunjungan >= ?
+        ORDER BY kj.tglKunjungan DESC, kj.jamKunjungan DESC
+        LIMIT 10`,
+      [idKaryawan, idKaryawan, idKaryawan, periode.mulai],
+    );
+    return {
+      success: true,
+      data: rows.map((r) => ({
+        idKunjungan: r.idKunjungan,
+        kodeKunjungan: r.kodeKunjungan,
+        tanggal: r.tanggal,
+        idPasien: r.idPasien,
+        namaPasien: r.namaPasien,
+        NoRM: r.NoRM,
+        namaPoli: r.namaPoli,
+        namaLayanan: r.namaLayanan,
+        peran: r.peran,
+        diagnosa: denganDiagnosa ? (r.diagnosa ?? null) : null,
+      })),
+    };
+  } catch (err) {
+    return handleServiceError(err, "Terjadi kesalahan saat mengambil riwayat penanganan.");
   }
 };

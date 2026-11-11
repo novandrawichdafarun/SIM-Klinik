@@ -58,6 +58,16 @@ export async function getHakAksesPageAction(selectedIdUser?: string): Promise<
   }
 }
 
+/** Daftar fitur (untuk matriks hak akses awal di form Tambah Akun) */
+export async function getFiturListAction(): Promise<ActionResponse<Fitur[]>> {
+  try {
+    await requireSuperAdmin();
+    return await getFiturListService();
+  } catch (error) {
+    return handleActionError(error, "Gagal mengambil daftar fitur.");
+  }
+}
+
 export async function saveHakAksesAction(
   idUser: string,
   matriks: MatriksHakAkses,

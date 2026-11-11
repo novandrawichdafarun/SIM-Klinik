@@ -1,12 +1,13 @@
 "use client";
 
+import { konfirmasi } from "@/components/feedback/konfirmasi";
+import { toast } from "@/components/feedback/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Info, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { deleteAkunAction } from "@/actions/akun";
 import Avatar from "@/components/ui/Avatar";
-import ErrorBox from "@/components/ui/ErrorBox";
 import StatusBadge from "@/components/ui/StatusBadge";
 import type { Akun, StatusAkunFilter } from "@/types/akun";
 import { formatTanggalWaktu, roleLabel } from "@/utils/format";
@@ -46,7 +47,6 @@ export default function AkunTabel({
   const router = useRouter();
   const [query, setQuery] = useState(q);
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -59,31 +59,26 @@ export default function AkunTabel({
 
   async function handleDelete(akun: Akun) {
     const nama = akun.namaLengkap ?? akun.email;
-    if (
-      !window.confirm(
-        `Hapus akun ${nama} (${akun.email})?\n\nKaryawan tetap tersimpan, tetapi tidak bisa login dan hak aksesnya ikut terhapus. Tindakan ini tidak dapat dibatalkan.`,
-      )
-    ) {
-      return;
-    }
-    setError(null);
+    const setuju = await konfirmasi({
+      judul: `Hapus akun ${nama}?`,
+      pesan: `${akun.email}\n\nKaryawan tetap tersimpan, tetapi tidak bisa login dan hak aksesnya ikut terhapus. Tindakan ini tidak dapat dibatalkan.`,
+      teksYa: "Ya, hapus",
+      tipe: "bahaya",
+    });
+    if (!setuju) return;
     setDeletingId(akun.idUser);
     const result = await deleteAkunAction(akun.idUser);
     setDeletingId(null);
     if (!result.success) {
-      setError(result.error);
+      toast.error(result.error);
       return;
     }
+    toast.success(`Akun ${nama} berhasil dihapus.`);
     startTransition(() => router.refresh());
   }
 
   return (
     <>
-      {error && (
-        <div className="mb-4">
-          <ErrorBox message={error} />
-        </div>
-      )}
 
       <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-center">
         <label className="flex h-14.5 w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 shadow-sm md:h-11.5 md:max-w-150">

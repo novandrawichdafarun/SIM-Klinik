@@ -41,6 +41,8 @@
   --danger-line: #fecaca;
   --danger-ink: #b91c1c;
   --neutral-soft: #ecebef;
+  --warning-soft: #fbe3d6;
+  --warning-ink: #8a3b12;
 
   /* Grafik: lolos kontras 3:1 di permukaan terang & gelap */
   --chart: #00a352;
@@ -77,6 +79,8 @@
   --danger-line: #6b2427;
   --danger-ink: #fca5a5;
   --neutral-soft: #2a2735;
+  --warning-soft: #3d2416;
+  --warning-ink: #f6b48c;
 
   --chart: #00a352;
   --chart-track: #1d3a2d;
@@ -115,6 +119,8 @@
   --color-danger-line: var(--danger-line);
   --color-danger-ink: var(--danger-ink);
   --color-neutral-soft: var(--neutral-soft);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-ink: var(--warning-ink);
   --color-chart: var(--chart);
   --color-chart-track: var(--chart-track);
 
@@ -149,4 +155,64 @@ h6 {
 }
 .shadow-high {
   box-shadow: var(--shadow-high);
+}
+
+/* ---------------- Feedback: toast & dialog konfirmasi ---------------- */
+@keyframes toast-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes toast-keluar {
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+@keyframes toast-progres {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+@keyframes fade-masuk {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes dialog-masuk {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+}
+.animate-toast-masuk {
+  animation: toast-masuk 0.2s ease-out;
+}
+.animate-toast-keluar {
+  animation: toast-keluar 0.18s ease-in forwards;
+}
+.animate-toast-progres {
+  animation: toast-progres linear forwards;
+}
+.animate-fade-masuk {
+  animation: fade-masuk 0.15s ease-out;
+}
+.animate-dialog-masuk {
+  animation: dialog-masuk 0.18s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-masuk,
+  .animate-toast-keluar,
+  .animate-fade-masuk,
+  .animate-dialog-masuk {
+    animation: none;
+  }
 }

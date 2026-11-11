@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/libs/authz";
+import { setFlash } from "@/libs/flash";
 import { layananSchema } from "@/schemas/layanan.schema";
 import {
   createLayananService,
@@ -54,6 +55,7 @@ export async function saveLayananAction(
   } catch (e) {
     return handleActionError(e, "Gagal menyimpan layanan.");
   }
+  await setFlash(id === null ? "Layanan berhasil ditambahkan." : "Layanan berhasil diperbarui.");
   redirect("/katalog-layanan");
 }
 export async function deleteLayananAction(id: number): Promise<ActionResponse> {

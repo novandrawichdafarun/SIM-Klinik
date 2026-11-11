@@ -1,7 +1,9 @@
 "use client";
+import { konfirmasi } from "@/components/feedback/konfirmasi";
+import { toast } from "@/components/feedback/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { deleteLayananAction } from "@/actions/layanan";
 import type { Layanan } from "@/types/layanan";
@@ -20,20 +22,24 @@ export default function KatalogLayananView({
   const router = useRouter();
   const [query, setQuery] = useState(q);
   const [pending, start] = useTransition();
-  const [selected, setSelected] = useState<Layanan | null>(null);
-  const [error, setError] = useState("");
   const submit = () =>
     start(() =>
       router.push(
         `/katalog-layanan?q=${encodeURIComponent(query)}&poli=${encodeURIComponent(poli)}${discount ? "&discount=1" : ""}`,
       ),
     );
-  const remove = async () => {
-    if (!selected) return;
-    const r = await deleteLayananAction(selected.id);
-    if (!r.success) setError(r.error);
+  const remove = async (item: Layanan) => {
+    const setuju = await konfirmasi({
+      judul: `Hapus layanan ${item.name}?`,
+      pesan: "Layanan ini akan dihapus dari katalog. Tindakan ini tidak dapat dibatalkan.",
+      teksYa: "Ya, hapus",
+      tipe: "bahaya",
+    });
+    if (!setuju) return;
+    const r = await deleteLayananAction(item.id);
+    if (!r.success) toast.error(r.error);
     else {
-      setSelected(null);
+      toast.success(`Layanan ${item.name} berhasil dihapus.`);
       router.refresh();
     }
   };
@@ -118,9 +124,7 @@ export default function KatalogLayananView({
                   <td>
                     {i.discount.enabled ? (
                       <span className="rounded-full bg-accent-soft px-2 py-1 text-[10px] text-accent-ink">
-                        {i.discount.type === "persen"
-                          ? `${i.discount.value}%`
-                          : money(i.discount.value)}
+                        {`${i.discount.value}%`}
                       </span>
                     ) : (
                       <span className="text-ink-3">—</span>
@@ -140,7 +144,8 @@ export default function KatalogLayananView({
                         <Pencil size={14} />
                       </Link>
                       <button
-                        onClick={() => setSelected(i)}
+                        onClick={() => remove(i)}
+                        aria-label={`Hapus ${i.name}`}
                         className="grid size-8 place-items-center rounded-lg border border-danger-line bg-danger-soft text-danger-ink"
                       >
                         <Trash2 size={14} />
@@ -160,39 +165,6 @@ export default function KatalogLayananView({
           </table>
         </div>
       </section>
-      {error && <p className="mt-3 text-sm text-danger-ink">{error}</p>}
-      {selected && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-ink/50 px-4">
-          <div
-            role="dialog"
-            className="w-full max-w-md rounded-xl bg-surface p-5 shadow-high"
-          >
-            <div className="flex justify-between">
-              <h2 className="font-bold">Hapus layanan {selected.name}?</h2>
-              <button onClick={() => setSelected(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <p className="mt-3 text-xs text-ink-3">
-              Layanan ini akan dihapus dari katalog.
-            </p>
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setSelected(null)}
-                className="rounded-lg border border-line px-4 py-2 text-xs font-semibold"
-              >
-                Batal
-              </button>
-              <button
-                onClick={remove}
-                className="rounded-lg bg-red-400 px-4 py-2 text-xs font-semibold text-white"
-              >
-                Hapus
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </>
   );
 }

@@ -8,7 +8,6 @@ export const AKSI_HAK_AKSES: AksiHakAkses[] = ["lihat", "tambah", "ubah", "hapus
 export type KodeFitur =
   | "rekap_pasien"
   | "input_pasien"
-  | "task_manager"
   | "arus_kas"
   | "reimburse"
   | "invoice_digital"

@@ -1,5 +1,6 @@
 "use client";
 
+import { konfirmasi } from "@/components/feedback/konfirmasi";
 import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { LogOut, Menu, UserRound } from "lucide-react";
@@ -54,6 +55,13 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   async function handleLogout() {
+    const setuju = await konfirmasi({
+      judul: "Keluar dari aplikasi?",
+      pesan: "Anda perlu masuk kembali untuk melanjutkan pekerjaan.",
+      teksYa: "Ya, keluar",
+      tipe: "peringatan",
+    });
+    if (!setuju) return;
     setIsLoggingOut(true);
     // Hapus baris user_sessions supaya slot perangkat (maks. 3) ikut dibebaskan
     const sessionToken = session?.user?.sessionToken;

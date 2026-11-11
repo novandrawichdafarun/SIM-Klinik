@@ -9,19 +9,33 @@ INSERT INTO `poli` (`idPoli`, `namaPoli`) VALUES
 (1, 'Poli Umum'),
 (2, 'Poli Gigi');
 
--- Contoh layanan katalog. Tarif disimpan sebagai transaksi keuangan,
--- lalu dihubungkan melalui layanan.idKeuangan.
+-- Contoh layanan katalog. Tarif tersimpan di layanan.tarif; baris keuangan
+-- tetap dihubungkan lewat layanan.idKeuangan untuk kompatibilitas.
+-- Layanan 101-103 dipakai juga oleh Seed_jasa_pelayanan.sql (baris layanan
+-- di file itu akan otomatis dilewati karena id-nya sudah ada).
 INSERT IGNORE INTO `keuangan` (`idTransaksi`, `jenisTransaksi`, `kategori`, `nominal`, `tglTransaksi`) VALUES
 (900001, 'Pendapatan layanan', 'Pemeriksaan', 100000, '2026-11-01');
 
-INSERT IGNORE INTO `layanan` (`idPoli`, `idKeuangan`, `namaLayanan`, `porsiDokter`, `diskon`) VALUES
-(1, 900001, 'Pemeriksaan umum', 0, 20);
+INSERT IGNORE INTO `keuangan` (`idTransaksi`, `jenisTransaksi`, `kategori`, `nominal`, `tglTransaksi`) VALUES
+(900002, 'Pendapatan layanan', 'Tindakan',    250000, '2026-10-01'),
+(900003, 'Pendapatan layanan', 'Tindakan',    300000, '2026-10-01'),
+(900004, 'Pendapatan layanan', 'Pemeriksaan',  75000, '2026-10-01');
+
+-- kodeLayanan = LYN- + idLayanan (3 digit), sama dengan yang dibuat aplikasi.
+-- nilaiDiskon selalu dalam persen (0-100).
+INSERT IGNORE INTO `layanan`
+  (`idLayanan`, `kodeLayanan`, `idPoli`, `idKeuangan`, `namaLayanan`, `kategori`, `tarif`,
+   `porsiDokter`, `diskon`, `diskonAktif`, `namaEvent`, `nilaiDiskon`, `mulaiDiskon`, `selesaiDiskon`)
+VALUES
+(1,   'LYN-001', 1, 900001, 'Pemeriksaan umum', 'Pemeriksaan', 100000, 0, 20, TRUE,  'Promo Pembukaan', 20, '2026-11-01', '2026-12-31'),
+(101, 'LYN-101', 2, 900002, 'Tambal gigi',      'Tindakan',    250000, 0, 0,  FALSE, NULL, 0, NULL, NULL),
+(102, 'LYN-102', 2, 900003, 'Cabut gigi',       'Tindakan',    300000, 0, 0,  FALSE, NULL, 0, NULL, NULL),
+(103, 'LYN-103', 1, 900004, 'Konsultasi gizi',  'Pemeriksaan',  75000, 0, 0,  FALSE, NULL, 0, NULL, NULL);
 
 -- Data master fitur (dibutuhkan aplikasi, bukan data dummy)
 INSERT INTO `fitur` (`kodeFitur`, `namaFitur`, `deskripsi`, `grup`, `urutan`, `khususSuperAdmin`) VALUES
 ('rekap_pasien',     'Rekap Pasien & Detail Layanan', 'Riwayat kunjungan dan layanan per pasien dari CRM', 'Pelayanan Pasien', 1, FALSE),
 ('input_pasien',     'Input Data Pasien Manual',      'Untuk pasien yang belum terdaftar di web CRM',      'Pelayanan Pasien', 2, FALSE),
-('task_manager',     'Task Manager',                  'Tugas harian dan penugasan antar karyawan',         'Pelayanan Pasien', 3, FALSE),
 ('arus_kas',         'Arus Kas',                      'Pemasukan dan pengeluaran klinik',                  'Keuangan',         4, FALSE),
 ('reimburse',        'Reimburse',                     'Pengajuan dan persetujuan klaim biaya',             'Keuangan',         5, FALSE),
 ('invoice_digital',  'Invoice Digital',               'Invoice dan tautan rating via WhatsApp',            'Keuangan',         6, FALSE),
@@ -48,11 +62,10 @@ VALUES
 (4, '10000000-0000-4000-8000-000000000004', 1, 'KRY-0004', '3174092408890006', 'Siti Aminah', 'Perawat', '0812-9843-2213', TRUE, 'DEMO-STR-0004', NULL, NOW()),
 (5, '10000000-0000-4000-8000-000000000005', 2, 'KRY-0005', '3174092408890007', 'Yuli Hartati', 'Perawat', '0812-9843-2214', TRUE, 'DEMO-STR-0005', NULL, NOW());
 
--- Contoh hak akses dr. Farhan (7 fitur aktif)
+-- Contoh hak akses dr. Farhan (6 fitur aktif)
 INSERT INTO hak_akses (id_user, kodeFitur, bisaLihat, bisaTambah, bisaUbah, bisaHapus, diubahOleh) VALUES
 ('10000000-0000-4000-8000-000000000001', 'rekap_pasien',    TRUE, FALSE, TRUE,  FALSE, '10000000-0000-4000-8000-000000000003'),
 ('10000000-0000-4000-8000-000000000001', 'input_pasien',    TRUE, FALSE, FALSE, FALSE, '10000000-0000-4000-8000-000000000003'),
-('10000000-0000-4000-8000-000000000001', 'task_manager',    TRUE, TRUE,  TRUE,  FALSE, '10000000-0000-4000-8000-000000000003'),
 ('10000000-0000-4000-8000-000000000001', 'reimburse',       TRUE, TRUE,  FALSE, FALSE, '10000000-0000-4000-8000-000000000003'),
 ('10000000-0000-4000-8000-000000000001', 'invoice_digital', TRUE, FALSE, FALSE, FALSE, '10000000-0000-4000-8000-000000000003'),
 ('10000000-0000-4000-8000-000000000001', 'katalog_layanan', TRUE, FALSE, FALSE, FALSE, '10000000-0000-4000-8000-000000000003'),
