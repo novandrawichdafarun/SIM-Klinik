@@ -27,7 +27,9 @@ function buildUrl(q: string, status: StatusAkunFilter) {
 
 function subtitle(a: Akun) {
   if (a.role === "super_admin") return roleLabel(a.role);
-  return [a.jenisKaryawan ?? roleLabel(a.role), a.namaPoli].filter(Boolean).join(" · ");
+  return [a.jenisKaryawan ?? roleLabel(a.role), a.namaPoli]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 export default function AkunTabel({
@@ -83,51 +85,59 @@ export default function AkunTabel({
         </div>
       )}
 
+      <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-center">
+        <label className="flex h-14.5 w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 shadow-sm md:h-11.5 md:max-w-150">
+          <Search
+            aria-hidden="true"
+            size={16}
+            className="shrink-0 text-ink-2"
+          />
+          <span className="sr-only">Cari akun</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cari email atau nama..."
+            className="w-full bg-transparent text-sm outline-none placeholder:text-ink-3"
+          />
+        </label>
+
+        <div
+          role="group"
+          aria-label="Filter status akun"
+          className="flex gap-2"
+        >
+          {FILTERS.map((f) => (
+            <Link
+              key={f.value}
+              href={buildUrl(q, f.value)}
+              aria-current={status === f.value ? "true" : undefined}
+              className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
+                status === f.value
+                  ? "border-emerald-500 bg-accent-soft text-accent-ink"
+                  : "border-line bg-surface hover:bg-surface-hover"
+              }`}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
+
+        <Link
+          href="/akun/tambah"
+          className="flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 text-[12px] font-semibold text-white shadow-md transition hover:bg-emerald-600 md:ml-auto"
+        >
+          <Plus aria-hidden="true" size={16} />
+          Tambah Akun
+        </Link>
+      </div>
+
       <section
         aria-busy={isPending}
         className={`overflow-hidden rounded-xl border border-line bg-surface shadow-sm transition-opacity ${
           isPending ? "opacity-60" : ""
         }`}
       >
-        <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center">
-          <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-line px-3 md:max-w-70">
-            <Search aria-hidden="true" size={16} className="shrink-0 text-ink-2" />
-            <span className="sr-only">Cari akun</span>
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cari email atau nama..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-ink-3"
-            />
-          </label>
-
-          <div role="group" aria-label="Filter status akun" className="flex gap-2">
-            {FILTERS.map((f) => (
-              <Link
-                key={f.value}
-                href={buildUrl(q, f.value)}
-                aria-current={status === f.value ? "true" : undefined}
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
-                  status === f.value
-                    ? "border-emerald-500 bg-accent-soft text-accent-ink"
-                    : "border-line bg-surface hover:bg-surface-hover"
-                }`}
-              >
-                {f.label}
-              </Link>
-            ))}
-          </div>
-
-          <Link
-            href="/akun/tambah"
-            className="flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600 md:ml-auto"
-          >
-            <Plus aria-hidden="true" size={16} />
-            Tambah Akun
-          </Link>
-        </div>
-
         <div className="overflow-x-auto">
           <table className="w-full min-w-200 border-collapse text-left text-sm">
             <thead className="bg-surface-muted text-[10px] font-bold tracking-wide text-ink-2 uppercase">
@@ -157,7 +167,9 @@ export default function AkunTabel({
                                 {a.namaLengkap}
                               </Link>
                             ) : (
-                              <span>{a.namaLengkap ?? "(tanpa data karyawan)"}</span>
+                              <span>
+                                {a.namaLengkap ?? "(tanpa data karyawan)"}
+                              </span>
                             )}
                             {isSelf && (
                               <span className="rounded-full bg-accent-soft px-2 py-0.5 text-[10px] font-semibold text-accent-ink">
@@ -173,14 +185,16 @@ export default function AkunTabel({
                     <td className="px-3">
                       <StatusBadge active={a.isActive} />
                     </td>
-                    <td className="px-3 text-ink-2">{formatTanggalWaktu(a.lastLoginAt)}</td>
+                    <td className="px-3 text-ink-2">
+                      {formatTanggalWaktu(a.lastLoginAt)}
+                    </td>
                     <td className="pr-5">
                       <div className="flex items-center justify-center gap-2">
                         <Link
                           href={`/akun/${a.idUser}/ubah`}
                           aria-label={`Ubah akun ${a.email}`}
                           title="Ubah akun"
-                          className="grid size-8 place-items-center rounded-lg border border-line hover:bg-surface-hover"
+                          className="grid size-8 place-items-center rounded-lg border border-line text-ink transition hover:bg-surface-hover hover:text-accent-ink"
                         >
                           <Pencil aria-hidden="true" size={15} />
                         </Link>
@@ -189,7 +203,11 @@ export default function AkunTabel({
                           onClick={() => handleDelete(a)}
                           disabled={isSelf || deletingId === a.idUser}
                           aria-label={`Hapus akun ${a.email}`}
-                          title={isSelf ? "Akun Anda tidak dapat dihapus" : "Hapus akun"}
+                          title={
+                            isSelf
+                              ? "Akun Anda tidak dapat dihapus"
+                              : "Hapus akun"
+                          }
                           className="grid size-8 place-items-center rounded-lg border border-danger-line bg-danger-soft text-danger-ink hover:bg-danger-line disabled:cursor-not-allowed disabled:border-line disabled:bg-surface disabled:text-ink-faint"
                         >
                           <Trash2 aria-hidden="true" size={15} />
@@ -201,7 +219,10 @@ export default function AkunTabel({
               })}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="h-24 text-center text-sm text-ink-3">
+                  <td
+                    colSpan={5}
+                    className="h-24 text-center text-sm text-ink-3"
+                  >
                     Tidak ada akun yang cocok.
                   </td>
                 </tr>
@@ -218,8 +239,8 @@ export default function AkunTabel({
 
       <p className="mt-5 flex items-start gap-2 rounded-xl bg-info-soft px-4 py-3 text-sm text-info-ink">
         <Info aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
-        Akun hanya dapat dibuat untuk karyawan yang sudah terdaftar di Kelola Karyawan. Hak akses
-        setiap akun diatur di menu Hak Akses.
+        Akun hanya dapat dibuat untuk karyawan yang sudah terdaftar di Kelola
+        Karyawan. Hak akses setiap akun diatur di menu Hak Akses.
       </p>
     </>
   );

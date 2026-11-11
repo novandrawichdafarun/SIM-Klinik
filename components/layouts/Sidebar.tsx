@@ -25,7 +25,9 @@ type NavGroup = { label: string; links: NavLink[]; superAdminOnly?: boolean };
 const navGroups: NavGroup[] = [
   {
     label: "MENU",
-    links: [{ name: "Dashboard Utama", href: "/dashboard", icon: LayoutDashboard }],
+    links: [
+      { name: "Dashboard Utama", href: "/dashboard", icon: LayoutDashboard },
+    ],
   },
   {
     // Hanya Pimpinan Klinik / Super Admin. Ini sekadar menyembunyikan menu;
@@ -71,7 +73,7 @@ function NavList({
         .filter((group) => !group.superAdminOnly || isSuperAdmin)
         .map((group) => (
           <section className="mt-3" key={group.label}>
-            <p className="px-4 pb-1.5 text-[8px] font-bold tracking-wide text-ink-3">
+            <p className="px-4 pb-1.5 text-[10px] font-bold tracking-wide text-ink-3">
               {group.label}
             </p>
             {group.links.map(({ name, href, icon: Icon }) => {
@@ -86,8 +88,10 @@ function NavList({
                   href={href}
                   onClick={onNavigate}
                   aria-current={active ? "page" : undefined}
-                  className={`mx-1 flex h-[34px] items-center gap-2.5 rounded-md px-3 text-[11px] ${
-                    active ? "bg-emerald-500 text-white" : "text-ink-2 hover:bg-surface-hover"
+                  className={`mx-1 flex h-8.5 items-center gap-2.5 rounded-md px-3 text-[12px] ${
+                    active
+                      ? "bg-emerald-500 text-white font-semibold"
+                      : "text-ink-3 hover:bg-surface-hover"
                   }`}
                 >
                   <Icon aria-hidden="true" size={14} strokeWidth={1.8} />
@@ -123,8 +127,8 @@ export default function Sidebar({
 }) {
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-[220px] border-r border-line bg-surface lg:block">
-        <div className="flex h-[66px] items-center border-b border-line px-4">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-55 border-r border-line bg-surface lg:block">
+        <div className="flex h-16.5 items-center border-b border-line px-4">
           <Brand />
         </div>
         <Navigation />

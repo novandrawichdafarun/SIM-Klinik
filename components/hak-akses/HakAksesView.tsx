@@ -33,11 +33,16 @@ const AKSI_LABEL: Record<AksiHakAkses, string> = {
 };
 
 function hitungFiturAktif(matriks: MatriksHakAkses): number {
-  return Object.values(matriks).filter((i) => i.lihat || i.tambah || i.ubah || i.hapus).length;
+  return Object.values(matriks).filter(
+    (i) => i.lihat || i.tambah || i.ubah || i.hapus,
+  ).length;
 }
 
 function subtitle(p: PenggunaHakAkses) {
-  const jabatan = p.role === "super_admin" ? roleLabel(p.role) : (p.jenisKaryawan ?? roleLabel(p.role));
+  const jabatan =
+    p.role === "super_admin"
+      ? roleLabel(p.role)
+      : (p.jenisKaryawan ?? roleLabel(p.role));
   return [jabatan, p.namaPoli].filter(Boolean).join(" · ");
 }
 
@@ -61,7 +66,9 @@ function DaftarPengguna({
       (p) =>
         (role === "semua" || p.role === role) &&
         (!q ||
-          `${p.namaLengkap ?? ""} ${p.NIP ?? ""} ${p.email}`.toLowerCase().includes(q)),
+          `${p.namaLengkap ?? ""} ${p.NIP ?? ""} ${p.email}`
+            .toLowerCase()
+            .includes(q)),
     );
   }, [pengguna, query, role]);
 
@@ -84,7 +91,11 @@ function DaftarPengguna({
         />
       </label>
 
-      <div role="group" aria-label="Filter role" className="mb-3 flex flex-wrap gap-1.5">
+      <div
+        role="group"
+        aria-label="Filter role"
+        className="mb-3 flex flex-wrap gap-1.5"
+      >
         {ROLE_FILTERS.map((f) => (
           <button
             key={f.value}
@@ -92,7 +103,9 @@ function DaftarPengguna({
             aria-pressed={role === f.value}
             onClick={() => setRole(f.value)}
             className={`rounded-full px-3 py-1 text-[11px] font-semibold transition ${
-              role === f.value ? "bg-accent-soft text-accent-ink" : "bg-surface-muted hover:bg-surface-hover"
+              role === f.value
+                ? "bg-accent-soft text-accent-ink"
+                : "bg-surface-muted hover:bg-surface-hover"
             }`}
           >
             {f.label}
@@ -100,7 +113,7 @@ function DaftarPengguna({
         ))}
       </div>
 
-      <ul className="-mx-1 max-h-[560px] flex-1 space-y-1 overflow-y-auto px-1">
+      <ul className="-mx-1 max-h-140 flex-1 space-y-1 overflow-y-auto px-1">
         {filtered.map((p) => {
           const active = p.idUser === selectedId;
           return (
@@ -120,24 +133,32 @@ function DaftarPengguna({
                   <span className="block truncate text-sm font-semibold">
                     {p.namaLengkap ?? p.email}
                   </span>
-                  <span className="block truncate text-xs text-ink-3">{subtitle(p)}</span>
+                  <span className="block truncate text-xs text-ink-3">
+                    {subtitle(p)}
+                  </span>
                 </span>
                 <span className="flex flex-col items-end gap-1">
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${
-                      active ? "bg-accent-soft text-accent-ink" : "bg-surface-hover text-ink-2"
+                      active
+                        ? "bg-accent-soft text-accent-ink"
+                        : "bg-surface-hover text-ink-2"
                     }`}
                   >
                     {p.jumlahFiturAktif} fitur
                   </span>
-                  {!p.isActive && <span className="text-[10px] text-ink-3">Nonaktif</span>}
+                  {!p.isActive && (
+                    <span className="text-[10px] text-ink-3">Nonaktif</span>
+                  )}
                 </span>
               </Link>
             </li>
           );
         })}
         {filtered.length === 0 && (
-          <li className="py-6 text-center text-sm text-ink-3">Tidak ada karyawan yang cocok.</li>
+          <li className="py-6 text-center text-sm text-ink-3">
+            Tidak ada karyawan yang cocok.
+          </li>
         )}
       </ul>
 
@@ -152,7 +173,13 @@ function DaftarPengguna({
 /* Panel kanan: matriks fitur x aksi                                */
 /* ---------------------------------------------------------------- */
 
-function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAkses }) {
+function MatriksEditor({
+  fitur,
+  detail,
+}: {
+  fitur: Fitur[];
+  detail: DetailHakAkses;
+}) {
   const router = useRouter();
   const { pengguna } = detail;
   const isSuperAdmin = pengguna.role === "super_admin";
@@ -166,7 +193,9 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
   const dirty = useMemo(
     () =>
       fitur.some((f) =>
-        AKSI_HAK_AKSES.some((a) => matriks[f.kodeFitur]?.[a] !== detail.matriks[f.kodeFitur]?.[a]),
+        AKSI_HAK_AKSES.some(
+          (a) => matriks[f.kodeFitur]?.[a] !== detail.matriks[f.kodeFitur]?.[a],
+        ),
       ),
     [fitur, matriks, detail.matriks],
   );
@@ -224,7 +253,11 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
             )}
           </h2>
           <p className="text-sm text-ink-3">
-            {[pengguna.NIP && `NIP: ${pengguna.NIP}`, pengguna.jenisKaryawan, pengguna.namaPoli]
+            {[
+              pengguna.NIP && `NIP: ${pengguna.NIP}`,
+              pengguna.jenisKaryawan,
+              pengguna.namaPoli,
+            ]
               .filter(Boolean)
               .join(" · ") || pengguna.email}
           </p>
@@ -243,7 +276,9 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
           >
             <div
               className="h-1.5 rounded-full bg-chart transition-all"
-              style={{ width: `${fitur.length ? (aktif / fitur.length) * 100 : 0}%` }}
+              style={{
+                width: `${fitur.length ? (aktif / fitur.length) * 100 : 0}%`,
+              }}
             />
           </div>
         </div>
@@ -252,7 +287,8 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
       {isSuperAdmin && (
         <p className="flex items-start gap-2 bg-accent-soft px-5 py-3 text-sm text-info-ink">
           <Info aria-hidden="true" size={16} className="mt-0.5 shrink-0" />
-          Super Admin (Pimpinan Klinik) selalu memiliki seluruh akses dan tidak perlu diatur.
+          Super Admin (Pimpinan Klinik) selalu memiliki seluruh akses dan tidak
+          perlu diatur.
         </p>
       )}
 
@@ -292,7 +328,9 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
                     <th scope="row" className="py-3 pl-5 text-left font-normal">
                       <span className="block font-semibold">{f.namaFitur}</span>
                       <span className="block text-xs text-ink-3">
-                        {f.khususSuperAdmin ? "Terkunci: khusus Super Admin" : f.deskripsi}
+                        {f.khususSuperAdmin
+                          ? "Terkunci: khusus Super Admin"
+                          : f.deskripsi}
                       </span>
                     </th>
                     {AKSI_HAK_AKSES.map((a) => (
@@ -302,7 +340,9 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
                           aria-label={`${AKSI_LABEL[a]} ${f.namaFitur}`}
                           checked={matriks[f.kodeFitur]?.[a] ?? false}
                           disabled={locked || isSaving}
-                          onChange={(e) => toggle(f.kodeFitur, a, e.target.checked)}
+                          onChange={(e) =>
+                            toggle(f.kodeFitur, a, e.target.checked)
+                          }
                           className="size-4.5 cursor-pointer accent-chart disabled:cursor-not-allowed disabled:opacity-40"
                         />
                       </td>
@@ -324,8 +364,10 @@ function MatriksEditor({ fitur, detail }: { fitur: Fitur[]; detail: DetailHakAks
             </p>
             {detail.terakhirDiubah && (
               <p>
-                Terakhir diubah {formatTanggalWaktu(detail.terakhirDiubah.waktu)}
-                {detail.terakhirDiubah.oleh && ` oleh ${detail.terakhirDiubah.oleh}`}
+                Terakhir diubah{" "}
+                {formatTanggalWaktu(detail.terakhirDiubah.waktu)}
+                {detail.terakhirDiubah.oleh &&
+                  ` oleh ${detail.terakhirDiubah.oleh}`}
               </p>
             )}
           </div>
@@ -382,13 +424,21 @@ export default function HakAksesView({
 }) {
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[340px_1fr]">
-      <DaftarPengguna pengguna={pengguna} selectedId={detail?.pengguna.idUser ?? null} />
+      <DaftarPengguna
+        pengguna={pengguna}
+        selectedId={detail?.pengguna.idUser ?? null}
+      />
       {detail ? (
         // key: reset state matriks ketika karyawan yang dipilih berganti
-        <MatriksEditor key={detail.pengguna.idUser} fitur={fitur} detail={detail} />
+        <MatriksEditor
+          key={detail.pengguna.idUser}
+          fitur={fitur}
+          detail={detail}
+        />
       ) : (
         <section className="rounded-xl border border-line bg-surface p-6 text-sm text-ink-3 shadow-sm">
-          Belum ada akun karyawan. Buat akun terlebih dahulu di menu Kelola Akun.
+          Belum ada akun karyawan. Buat akun terlebih dahulu di menu Kelola
+          Akun.
         </section>
       )}
     </div>

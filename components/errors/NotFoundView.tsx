@@ -5,7 +5,7 @@ import { Compass, ArrowLeft, MapPinOff } from "lucide-react";
 import { connection } from "next/server";
 
 export default async function NotFoundView() {
-  await connection; // Ensure the database connection is established
+  await connection(); // Ensure the database connection is established
   const session = await getServerSession(authOptions);
 
   const targetUrl = session ? "/dashboard" : "/";

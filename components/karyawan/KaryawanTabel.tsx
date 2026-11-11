@@ -30,8 +30,12 @@ function buildUrl(q: string, page: number) {
 }
 
 /** Menghasilkan mis. [1, 2, "...", 7] */
-function getPageNumbers(current: number, totalPages: number): (number | "...")[] {
-  if (totalPages <= 5) return Array.from({ length: totalPages }, (_, i) => i + 1);
+function getPageNumbers(
+  current: number,
+  totalPages: number,
+): (number | "...")[] {
+  if (totalPages <= 5)
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
 
   const pages = [1, current - 1, current, current + 1, totalPages]
     .filter((p, i, arr) => p >= 1 && p <= totalPages && arr.indexOf(p) === i)
@@ -45,11 +49,18 @@ function getPageNumbers(current: number, totalPages: number): (number | "...")[]
   return result;
 }
 
-const navClass = "flex items-center gap-1 rounded-md bg-surface-hover px-2 py-1.5 text-[9px]";
+const navClass =
+  "flex items-center gap-1 rounded-md bg-surface-hover px-2 py-1.5 text-[9px]";
 const iconLinkClass =
-  "grid size-7 place-items-center rounded-md text-ink transition hover:bg-surface-hover hover:text-accent-ink";
+  "grid size-8 place-items-center rounded-lg border border-line text-ink transition hover:bg-surface-hover hover:text-accent-ink";
 
-export default function KaryawanTabel({ items, total, page, pageSize, q }: Props) {
+export default function KaryawanTabel({
+  items,
+  total,
+  page,
+  pageSize,
+  q,
+}: Props) {
   const router = useRouter();
   const [query, setQuery] = useState(q);
   const [isPending, startTransition] = useTransition();
@@ -71,7 +82,11 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
     <>
       <div className="mb-5 flex flex-col items-start gap-3 md:flex-row md:items-center">
         <label className="flex h-14.5 w-full items-center gap-3 rounded-xl border border-line bg-surface px-4 shadow-sm md:h-11.5 md:max-w-190">
-          <Search aria-hidden="true" size={19} className="shrink-0 text-ink-2" />
+          <Search
+            aria-hidden="true"
+            size={19}
+            className="shrink-0 text-ink-2"
+          />
           <span className="sr-only">Cari karyawan</span>
           <input
             type="search"
@@ -84,7 +99,7 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
 
         <Link
           href="/karyawan/tambah"
-          className="flex h-10 items-center gap-2 rounded-lg bg-emerald-500 px-4 text-[11px] font-semibold text-[#063e27] shadow-md transition hover:bg-emerald-400"
+          className="flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 text-[12px] font-semibold text-white shadow-md transition hover:bg-emerald-600 md:ml-auto"
         >
           <UserRoundPlus aria-hidden="true" size={16} />
           <Plus aria-hidden="true" size={14} className="-ml-2" />
@@ -101,7 +116,7 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
         <div className="overflow-x-auto">
           <table className="w-full min-w-212.5 border-collapse text-left">
             <thead className="bg-surface-muted">
-              <tr className="h-10 text-[8px] font-bold text-ink-2">
+              <tr className="h-10 text-[10px] font-bold text-ink-2">
                 <th className="pl-4">KARYAWAN &amp; NIP</th>
                 <th className="px-3">PERAN / HAK AKSES</th>
                 <th className="px-3">JABATAN &amp; UNIT KERJA</th>
@@ -124,11 +139,11 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                       <span>
                         <Link
                           href={`/karyawan/${k.idKaryawan}`}
-                          className="block text-[10px] font-bold hover:text-accent-ink hover:underline"
+                          className="block text-[12px] font-bold hover:text-accent-ink hover:underline"
                         >
                           {k.namaLengkap}
                         </Link>
-                        <small className="mt-1 block text-[8px]">
+                        <small className="mt-1 block text-[10px]">
                           NIP: {k.NIP} <span className="text-chart">●</span>{" "}
                           {k.namaPoli}
                         </small>
@@ -140,17 +155,17 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                   <td className="px-3">
                     <div className="flex flex-wrap items-center gap-1">
                       {k.role ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[8px] text-accent-ink">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-[10px] text-accent-ink">
                           <span className="size-1.5 rounded-full bg-emerald-700" />
                           {roleLabel(k.role)}
                         </span>
                       ) : (
-                        <span className="inline-flex rounded-full bg-surface-hover px-2.5 py-1 text-[8px] text-ink-3">
+                        <span className="inline-flex rounded-full bg-surface-hover px-2.5 py-1 text-[10px] text-ink-3">
                           Belum ada akun
                         </span>
                       )}
                       {!k.statusAktif && (
-                        <span className="inline-flex rounded-full bg-neutral-soft px-2.5 py-1 text-[8px] text-ink-3">
+                        <span className="inline-flex rounded-full bg-neutral-soft px-2.5 py-1 text-[10px] text-ink-3">
                           Nonaktif
                         </span>
                       )}
@@ -159,14 +174,20 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
 
                   {/* JABATAN & UNIT KERJA */}
                   <td className="px-3">
-                    {k.jenisKaryawan}
-                    <small className="mt-1 block text-[8px]">{k.namaPoli}</small>
+                    <p className="font-semibold text-[12px] text-ink">
+                      {k.jenisKaryawan}
+                    </p>
+                    <small className="mt-1 block text-[10px]">
+                      {k.namaPoli}
+                    </small>
                   </td>
 
                   {/* NIK & KONTAK */}
                   <td className="px-3">
-                    {k.NIK}
-                    <small className="mt-1 flex items-center gap-1 text-[8px] text-accent-ink">
+                    <p className="font-semibold text-[12px] text-ink">
+                      {k.NIK}
+                    </p>
+                    <small className="mt-1 flex items-center gap-1 text-[10px] text-accent-ink">
                       <MessageSquareText aria-hidden="true" size={10} />
                       {k.noHp ?? "-"}
                     </small>
@@ -176,8 +197,16 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                   <td className="px-3">
                     {k.STR || k.SIP ? (
                       <>
-                        {k.STR && <span className="block">STR: {k.STR}</span>}
-                        {k.SIP && <small className="mt-1 block text-[8px]">SIP: {k.SIP}</small>}
+                        {k.STR && (
+                          <p className="font-semibold text-[12px] text-ink">
+                            STR: {k.STR}
+                          </p>
+                        )}
+                        {k.SIP && (
+                          <small className="mt-1 block text-[10px]">
+                            SIP: {k.SIP}
+                          </small>
+                        )}
                       </>
                     ) : (
                       <span className="text-ink-3">-</span>
@@ -193,7 +222,7 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                         title="Lihat detail"
                         className={iconLinkClass}
                       >
-                        <Eye aria-hidden="true" size={14} />
+                        <Eye aria-hidden="true" size={16} />
                       </Link>
                       <Link
                         href={`/karyawan/${k.idKaryawan}/ubah`}
@@ -201,7 +230,7 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                         title="Ubah data"
                         className={iconLinkClass}
                       >
-                        <Pencil aria-hidden="true" size={14} />
+                        <Pencil aria-hidden="true" size={16} />
                       </Link>
                       {k.idUser ? (
                         <Link
@@ -210,7 +239,7 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                           title="Atur hak akses"
                           className={iconLinkClass}
                         >
-                          <ShieldCheck aria-hidden="true" size={14} />
+                          <ShieldCheck aria-hidden="true" size={16} />
                         </Link>
                       ) : (
                         <Link
@@ -219,7 +248,7 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                           title="Buat akun"
                           className={iconLinkClass}
                         >
-                          <KeyRound aria-hidden="true" size={14} />
+                          <KeyRound aria-hidden="true" size={16} />
                         </Link>
                       )}
                     </div>
@@ -229,8 +258,13 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
 
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="h-24 text-center text-sm text-ink-3">
-                    {q ? `Tidak ada karyawan yang cocok dengan "${q}".` : "Belum ada data karyawan."}
+                  <td
+                    colSpan={6}
+                    className="h-24 text-center text-sm text-ink-3"
+                  >
+                    {q
+                      ? `Tidak ada karyawan yang cocok dengan "${q}".`
+                      : "Belum ada data karyawan."}
                   </td>
                 </tr>
               )}
@@ -250,11 +284,14 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
           <nav aria-label="Halaman" className="flex items-center gap-1">
             {page > 1 ? (
               <Link href={buildUrl(q, page - 1)} className={navClass}>
-                <ChevronLeft aria-hidden="true" size={12} /> Sebelumnya
+                <ChevronLeft aria-hidden="true" size={14} /> Sebelumnya
               </Link>
             ) : (
-              <span aria-disabled="true" className={`${navClass} text-ink-faint`}>
-                <ChevronLeft aria-hidden="true" size={12} /> Sebelumnya
+              <span
+                aria-disabled="true"
+                className={`${navClass} text-ink-faint`}
+              >
+                <ChevronLeft aria-hidden="true" size={14} /> Sebelumnya
               </span>
             )}
 
@@ -270,7 +307,9 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
                     href={buildUrl(q, p)}
                     aria-current={p === page ? "page" : undefined}
                     className={`rounded-md px-2.5 py-1.5 text-[9px] ${
-                      p === page ? "bg-emerald-500 text-white" : "hover:bg-surface-hover"
+                      p === page
+                        ? "bg-emerald-500 text-white"
+                        : "hover:bg-surface-hover"
                     }`}
                   >
                     {p}
@@ -281,11 +320,14 @@ export default function KaryawanTabel({ items, total, page, pageSize, q }: Props
 
             {page < totalPages ? (
               <Link href={buildUrl(q, page + 1)} className={navClass}>
-                Selanjutnya <ChevronRight aria-hidden="true" size={12} />
+                Selanjutnya <ChevronRight aria-hidden="true" size={14} />
               </Link>
             ) : (
-              <span aria-disabled="true" className={`${navClass} text-ink-faint`}>
-                Selanjutnya <ChevronRight aria-hidden="true" size={12} />
+              <span
+                aria-disabled="true"
+                className={`${navClass} text-ink-faint`}
+              >
+                Selanjutnya <ChevronRight aria-hidden="true" size={14} />
               </span>
             )}
           </nav>

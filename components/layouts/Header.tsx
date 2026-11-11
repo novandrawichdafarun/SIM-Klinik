@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, CircleHelp, LogOut, Menu, UserRound } from "lucide-react";
+import { LogOut, Menu, UserRound } from "lucide-react";
 import Brand from "../assets/Brand";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { clearDbSessionAction } from "@/actions/auth";
@@ -50,15 +50,15 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   const displayName =
     profile?.namaLengkap || profile?.email || "Profil tidak tersedia";
   const displayRole =
-    profile?.jenisKaryawan ||
-    (profile ? roleLabel(profile.role) : "");
+    profile?.jenisKaryawan || (profile ? roleLabel(profile.role) : "");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   async function handleLogout() {
     setIsLoggingOut(true);
     // Hapus baris user_sessions supaya slot perangkat (maks. 3) ikut dibebaskan
     const sessionToken = session?.user?.sessionToken;
-    if (sessionToken) await clearDbSessionAction(sessionToken).catch(() => null);
+    if (sessionToken)
+      await clearDbSessionAction(sessionToken).catch(() => null);
     await signOut({ callbackUrl: "/" });
   }
 
@@ -78,13 +78,6 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
 
       <div className="flex items-center gap-3 lg:gap-4">
         <ThemeToggle />
-        <button aria-label="Notifikasi" className="relative text-ink">
-          <Bell size={17} />
-          <span className="absolute -right-1 -top-1 size-2.5 rounded-full bg-red-600" />
-        </button>
-        <button aria-label="Bantuan" className="hidden text-ink sm:block">
-          <CircleHelp size={17} />
-        </button>
         <span className="hidden h-8 border-l border-line sm:block" />
         <div className="hidden text-right text-[10px] font-semibold sm:block">
           {isLoading ? (
@@ -94,9 +87,11 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
             </>
           ) : (
             <>
-              {displayName}
+              <p className="truncate text-[12px] font-bold text-ink">
+                {displayName}
+              </p>
               {displayRole && (
-                <small className="mt-1 block text-[8px] font-bold uppercase text-accent-ink">
+                <small className="mt-1 block text-[10px] font-bold uppercase text-accent-ink">
                   {displayRole}
                 </small>
               )}
@@ -115,8 +110,10 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
           disabled={isLoggingOut}
           className="flex h-8 items-center gap-1.5 rounded-lg border border-line px-2.5 text-[11px] font-semibold text-ink hover:bg-surface-hover disabled:opacity-60"
         >
-          <LogOut aria-hidden="true" size={14} />
-          <span className="hidden sm:inline">{isLoggingOut ? "Keluar..." : "Keluar"}</span>
+          <LogOut aria-hidden="true" size={16} />
+          <span className="hidden sm:inline">
+            {isLoggingOut ? "Keluar..." : "Keluar"}
+          </span>
           <span className="sr-only sm:hidden">Keluar</span>
         </button>
       </div>
