@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useActionState, useState } from "react";
+import { useFeedbackAksi } from "@/components/feedback/useFeedbackAksi";
 import { saveLayananAction } from "@/actions/layanan";
 import type { Layanan } from "@/types/layanan";
 const input =
@@ -13,13 +14,11 @@ const empty: Layanan = {
   poli: "Poli Umum",
   category: "Pemeriksaan",
   price: 0,
-  duration: 15,
   description: "",
   active: true,
   discount: {
     enabled: false,
     eventName: "",
-    type: "persen",
     value: 0,
     startDate: "",
     endDate: "",
@@ -37,25 +36,26 @@ export default function LayananForm({
     saveLayananAction.bind(null, initial?.id ?? null),
     null,
   );
+  useFeedbackAksi(state);
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   const sd = (k: string, v: unknown) =>
     setF((x) => ({ ...x, discount: { ...x.discount, [k]: v } }));
-  const discount = Math.round(
-    f.discount.type === "persen"
-      ? (f.price * f.discount.value) / 100
-      : f.discount.value,
-  );
+  // Diskon event selalu persen dari tarif
+  const discount = Math.round((f.price * f.discount.value) / 100);
   return (
     <form action={action} className="grid gap-5 lg:grid-cols-[1.7fr_1fr]">
-      {state && !state.success && (
-        <div className="lg:col-span-2">
-          <p className="rounded-lg bg-danger-soft p-3 text-sm text-danger-ink">
-            {state.error}
-          </p>
-        </div>
-      )}
       <section className="rounded-xl border border-line bg-surface p-4 shadow-sm">
-        <h2 className="mb-4 text-sm font-bold">Informasi Layanan</h2>
+        <h2 className="mb-1 text-sm font-bold">Informasi Layanan</h2>
+        <p className="mb-4 text-[11px] text-ink-3">
+          {initial?.code ? (
+            <>
+              Kode layanan <b className="text-ink">{initial.code}</b> · dibuat otomatis dan tidak
+              dapat diubah.
+            </>
+          ) : (
+            "Kode layanan dibuat otomatis setelah layanan disimpan."
+          )}
+        </p>
         <div className="grid gap-4 md:grid-cols-2">
           {[
             [
@@ -65,16 +65,6 @@ export default function LayananForm({
                 required
                 value={f.name}
                 onChange={(e) => set("name", e.target.value)}
-                className={input}
-              />,
-            ],
-            [
-              "Kode layanan",
-              <input
-                key="code"
-                required
-                value={f.code}
-                onChange={(e) => set("code", e.target.value.toUpperCase())}
                 className={input}
               />,
             ],
@@ -117,18 +107,6 @@ export default function LayananForm({
                 min="0"
                 value={f.price || ""}
                 onChange={(e) => set("price", Number(e.target.value))}
-                className={input}
-              />,
-            ],
-            [
-              "Estimasi durasi",
-              <input
-                key="duration"
-                required
-                type="number"
-                min="1"
-                value={f.duration}
-                onChange={(e) => set("duration", Number(e.target.value))}
                 className={input}
               />,
             ],
@@ -199,31 +177,25 @@ export default function LayananForm({
               className={input}
             />
           </label>
-          <div className="flex rounded-lg bg-surface-muted p-1">
-            {["persen", "nominal"].map((x) => (
-              <button
-                type="button"
-                key={x}
-                disabled={!f.discount.enabled}
-                onClick={() => sd("type", x)}
-                className={`h-8 flex-1 rounded-md text-xs font-semibold ${f.discount.type === x ? "bg-surface shadow-sm" : "text-ink-3"}`}
-              >
-                {x === "persen" ? "Persen" : "Nominal"}
-              </button>
-            ))}
-          </div>
           <label>
             <span className="mb-1 block text-[10px] font-semibold text-ink-2">
-              Nilai diskon
+              Nilai diskon (%)
             </span>
-            <input
-              disabled={!f.discount.enabled}
-              type="number"
-              min="0"
-              value={f.discount.value || ""}
-              onChange={(e) => sd("value", Number(e.target.value))}
-              className={input}
-            />
+            <div className="relative">
+              <input
+                disabled={!f.discount.enabled}
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={f.discount.value || ""}
+                onChange={(e) => sd("value", Number(e.target.value))}
+                className={`${input} pr-8`}
+              />
+              <span className="pointer-events-none absolute top-2.5 right-3 text-xs text-ink-3">
+                %
+              </span>
+            </div>
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label>
@@ -258,7 +230,7 @@ export default function LayananForm({
                 <b>Rp {f.price.toLocaleString("id-ID")}</b>
               </div>
               <div className="mt-2 flex justify-between">
-                <span>Diskon</span>
+                <span>Diskon ({f.discount.value || 0}%)</span>
                 <b>- Rp {discount.toLocaleString("id-ID")}</b>
               </div>
               <div className="mt-2 flex justify-between border-t border-line pt-2">
@@ -272,11 +244,9 @@ export default function LayananForm({
         </div>
       </section>
       <input type="hidden" name="namaLayanan" value={f.name} />
-      <input type="hidden" name="kodeLayanan" value={f.code} />
       <input type="hidden" name="idPoli" value={f.poliId} />
       <input type="hidden" name="kategori" value={f.category} />
       <input type="hidden" name="tarif" value={f.price} />
-      <input type="hidden" name="estimasiDurasi" value={f.duration} />
       <input type="hidden" name="statusAktif" value={f.active ? "1" : "0"} />
       <input
         type="hidden"
@@ -284,7 +254,6 @@ export default function LayananForm({
         value={f.discount.enabled ? "1" : "0"}
       />
       <input type="hidden" name="namaEvent" value={f.discount.eventName} />
-      <input type="hidden" name="jenisDiskon" value={f.discount.type} />
       <input type="hidden" name="nilaiDiskon" value={f.discount.value} />
       <input type="hidden" name="mulaiDiskon" value={f.discount.startDate} />
       <input type="hidden" name="selesaiDiskon" value={f.discount.endDate} />

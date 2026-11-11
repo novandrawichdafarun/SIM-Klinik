@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireSuperAdmin } from "@/libs/authz";
+import { setFlash } from "@/libs/flash";
 import { karyawanSchema } from "@/schemas/karyawan.schema";
 import {
   createKaryawanService,
@@ -136,5 +137,8 @@ export async function saveKaryawanAction(
     return handleActionError(error, "Gagal menyimpan data karyawan.");
   }
 
+  await setFlash(
+    idKaryawan === null ? "Karyawan berhasil ditambahkan." : "Data karyawan berhasil diperbarui.",
+  );
   redirect(`/karyawan/${targetId}`);
 }

@@ -45,3 +45,29 @@ export interface KaryawanDetailPageData {
   rating: RatingDokterStats;
   kinerja: KinerjaDokter;
 }
+
+/** Kunjungan yang ditangani karyawan (halaman Kinerja Saya) */
+export interface RiwayatDitangani {
+  idKunjungan: number;
+  kodeKunjungan: string;
+  tanggal: string; // YYYY-MM-DD
+  idPasien: number;
+  namaPasien: string;
+  NoRM: string;
+  namaPoli: string;
+  namaLayanan: string;
+  peran: "dokter" | "perawat";
+  diagnosa: string | null; // null bila pengguna bukan dokter
+}
+
+export interface KinerjaSayaData {
+  namaLengkap: string;
+  jenisKaryawan: string | null;
+  namaPoli: string | null;
+  jabatan: "dokter" | "perawat" | null;
+  periode: PeriodeKinerja;
+  /** null = bukan dokter/perawat (tidak dinilai pengunjung) */
+  rating: RatingDokterStats | null;
+  kinerja: KinerjaDokter;
+  riwayat: RiwayatDitangani[];
+}

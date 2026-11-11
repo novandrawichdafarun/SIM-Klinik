@@ -4,12 +4,15 @@ import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 import { Save } from "lucide-react";
 import { createAkunAction, updateAkunAction } from "@/actions/akun";
-import ErrorBox from "@/components/ui/ErrorBox";
+import { useFeedbackAksi } from "@/components/feedback/useFeedbackAksi";
 import type { ActionResponse } from "@/types/action";
 import type { Akun } from "@/types/akun";
 import type { UserRole } from "@/types/auth";
+import type { Fitur, MatriksHakAkses } from "@/types/hak-akses";
 import type { KaryawanOption } from "@/types/karyawan";
+import { defaultMatriksUntukRole } from "@/libs/hak-akses-default";
 import { isJabatanDokter, isJabatanPimpinan, ROLE_OPTIONS } from "@/utils/format";
+import HakAksesAwal from "./HakAksesAwal";
 
 const inputClass =
   "h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-surface-muted disabled:text-ink-3";
@@ -46,7 +49,13 @@ function tebakRole(jenisKaryawan: string | null | undefined): UserRole {
 }
 
 type Props =
-  | { mode: "create"; karyawanOptions: KaryawanOption[]; defaultKaryawanId?: number }
+  | {
+      mode: "create";
+      karyawanOptions: KaryawanOption[];
+      defaultKaryawanId?: number;
+      /** Daftar fitur untuk matriks hak akses awal */
+      fitur: Fitur[];
+    }
   | { mode: "edit"; akun: Akun; isSelf: boolean };
 
 export default function AkunForm(props: Props) {
@@ -54,8 +63,7 @@ export default function AkunForm(props: Props) {
 
   const initialKaryawan =
     props.mode === "create"
-      ? (props.karyawanOptions.find((k) => k.idKaryawan === props.defaultKaryawanId) ??
-        undefined)
+      ? (props.karyawanOptions.find((k) => k.idKaryawan === props.defaultKaryawanId) ?? undefined)
       : undefined;
 
   // Input dikontrol supaya isian tetap ada saat server mengembalikan error
@@ -67,6 +75,18 @@ export default function AkunForm(props: Props) {
     isEdit ? props.akun.role : tebakRole(initialKaryawan?.jenisKaryawan),
   );
   const [isActive, setIsActive] = useState(isEdit ? (props.akun.isActive ? "1" : "0") : "1");
+  // Hak akses awal (hanya mode tambah): dicentang otomatis sesuai role
+  const [matriks, setMatriks] = useState<MatriksHakAkses>(() =>
+    props.mode === "create"
+      ? defaultMatriksUntukRole(tebakRole(initialKaryawan?.jenisKaryawan), props.fitur)
+      : {},
+  );
+
+  /** Ganti role sekaligus centang ulang hak akses default untuk role tersebut */
+  function gantiRole(next: UserRole) {
+    setRole(next);
+    if (props.mode === "create") setMatriks(defaultMatriksUntukRole(next, props.fitur));
+  }
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -75,6 +95,7 @@ export default function AkunForm(props: Props) {
     action,
     null,
   );
+  useFeedbackAksi(state);
 
   const lockSelf = isEdit && props.isSelf;
 
@@ -97,7 +118,6 @@ export default function AkunForm(props: Props) {
       }}
       className="space-y-5"
     >
-      {state && !state.success && <ErrorBox message={state.error} />}
 
       <section className="space-y-4 rounded-xl border border-line bg-surface p-5 shadow-sm">
         {props.mode === "create" ? (
@@ -113,7 +133,7 @@ export default function AkunForm(props: Props) {
               value={idKaryawan}
               onChange={(e) => {
                 setIdKaryawan(e.target.value);
-                setRole(
+                gantiRole(
                   tebakRole(
                     props.karyawanOptions.find((k) => String(k.idKaryawan) === e.target.value)
                       ?.jenisKaryawan,
@@ -170,7 +190,7 @@ export default function AkunForm(props: Props) {
               name={lockRole ? undefined : "role"}
               value={roleValue}
               disabled={lockRole}
-              onChange={(e) => setRole(e.target.value as UserRole)}
+              onChange={(e) => gantiRole(e.target.value as UserRole)}
               className={inputClass}
             >
               {ROLE_OPTIONS.map(([value, label]) => (
@@ -208,6 +228,21 @@ export default function AkunForm(props: Props) {
           )}
         </div>
       </section>
+
+      {props.mode === "create" && (
+        <>
+          <HakAksesAwal
+            role={roleValue}
+            fitur={props.fitur}
+            matriks={matriks}
+            onChange={setMatriks}
+            onReset={() => setMatriks(defaultMatriksUntukRole(roleValue, props.fitur))}
+          />
+          {roleValue !== "super_admin" && (
+            <input type="hidden" name="hakAkses" value={JSON.stringify(matriks)} />
+          )}
+        </>
+      )}
 
       <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
         <h2 className="mb-1 text-[15px] font-bold">{isEdit ? "Ganti Kata Sandi" : "Kata Sandi"}</h2>

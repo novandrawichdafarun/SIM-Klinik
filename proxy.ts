@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { withAuth } from "next-auth/middleware";
 
 /** Route yang hanya boleh dibuka Pimpinan Klinik / Super Admin */
-const SUPER_ADMIN_PREFIXES = ["/karyawan", "/akun", "/hak-akses"];
+const SUPER_ADMIN_PREFIXES = ["/karyawan", "/akun", "/hak-akses", "/tarif-jasa"];
 
 export default withAuth(
   function proxy(req) {
@@ -32,5 +32,10 @@ export const config = {
     "/karyawan/:path*",
     "/akun/:path*",
     "/hak-akses/:path*",
+    "/tarif-jasa/:path*",
+    "/jasa-pelayanan/:path*",
+    "/kinerja-saya/:path*",
+    "/invoice-digital/:path*",
+    "/rekap-pasien/:path*",
   ],
 };

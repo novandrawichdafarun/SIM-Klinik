@@ -1,10 +1,12 @@
+import { randomBytes } from "crypto";
 import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { getMySQLPool } from "@/database/mysql-client";
-import type { Layanan, ServiceDiscountType } from "@/types/layanan";
+import type { Layanan } from "@/types/layanan";
 import type { LayananInput } from "@/schemas/layanan.schema";
 import type { ActionResponse } from "@/types/action";
 import { handleServiceError } from "@/utils/error";
-import { isMySQLDuplicateError } from "@/utils/mysql";
+import { generateKodeLayanan } from "@/utils/format";
+import { mysqlTransaction } from "@/utils/mysql";
 
 const select =
   "SELECT l.*, p.namaPoli FROM layanan l JOIN poli p ON p.idPoli = l.idPoli";
@@ -17,13 +19,11 @@ function map(row: RowDataPacket): Layanan {
     poli: row.namaPoli,
     category: row.kategori,
     price: Number(row.tarif),
-    duration: row.estimasiDurasi,
     description: row.deskripsi ?? "",
     active: row.statusAktif,
     discount: {
       enabled: row.diskonAktif,
       eventName: row.namaEvent ?? "",
-      type: row.jenisDiskon as ServiceDiscountType,
       value: Number(row.nilaiDiskon),
       startDate: row.mulaiDiskon ?? "",
       endDate: row.selesaiDiskon ?? "",
@@ -74,35 +74,40 @@ export async function getLayananByIdService(
     return handleServiceError(e, "Terjadi kesalahan saat mengambil layanan.");
   }
 }
+// Kode layanan sengaja tidak ada di sini: dibuat otomatis saat tambah & tidak pernah diubah.
+// Diskon event selalu persen; kolom lama `diskon` diisi persen yang sama bila diskon aktif.
 const params = (d: LayananInput) => [
-  d.kodeLayanan,
   d.idPoli,
   d.namaLayanan,
   d.kategori,
   d.tarif,
-  d.estimasiDurasi,
   d.deskripsi || null,
   d.statusAktif,
   d.diskonAktif,
   d.namaEvent || null,
-  d.jenisDiskon,
-  d.nilaiDiskon,
+  d.diskonAktif ? d.nilaiDiskon : 0,
   d.mulaiDiskon || null,
   d.selesaiDiskon || null,
-  d.diskonAktif && d.jenisDiskon === "persen" ? d.nilaiDiskon : 0,
+  d.diskonAktif ? d.nilaiDiskon : 0,
 ];
 export async function createLayananService(
   d: LayananInput,
 ): Promise<ActionResponse> {
   try {
-    await getMySQLPool().execute(
-      "INSERT INTO layanan (kodeLayanan,idPoli,namaLayanan,kategori,tarif,estimasiDurasi,deskripsi,statusAktif,diskonAktif,namaEvent,jenisDiskon,nilaiDiskon,mulaiDiskon,selesaiDiskon,porsiDokter,diskon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)",
-      params(d),
-    );
+    // idLayanan baru diketahui setelah INSERT, jadi: INSERT dengan kode sementara (TMP-...)
+    // lalu UPDATE ke LYN-xxx dalam satu transaksi (trigger DB mengizinkan perubahan dari TMP-).
+    await mysqlTransaction(async (conn) => {
+      const [result] = await conn.execute<ResultSetHeader>(
+        "INSERT INTO layanan (kodeLayanan,idPoli,namaLayanan,kategori,tarif,deskripsi,statusAktif,diskonAktif,namaEvent,nilaiDiskon,mulaiDiskon,selesaiDiskon,porsiDokter,diskon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0,?)",
+        [`TMP-${randomBytes(8).toString("hex")}`, ...params(d)],
+      );
+      await conn.execute(
+        "UPDATE layanan SET kodeLayanan = ? WHERE idLayanan = ?",
+        [generateKodeLayanan(result.insertId), result.insertId],
+      );
+    });
     return { success: true, message: "Layanan berhasil ditambahkan." };
   } catch (e) {
-    if (isMySQLDuplicateError(e))
-      return { success: false, error: "Kode layanan sudah digunakan." };
     return handleServiceError(e, "Terjadi kesalahan saat menambahkan layanan.");
   }
 }
@@ -112,13 +117,11 @@ export async function updateLayananService(
 ): Promise<ActionResponse> {
   try {
     await getMySQLPool().execute(
-      "UPDATE layanan SET kodeLayanan=?,idPoli=?,namaLayanan=?,kategori=?,tarif=?,estimasiDurasi=?,deskripsi=?,statusAktif=?,diskonAktif=?,namaEvent=?,jenisDiskon=?,nilaiDiskon=?,mulaiDiskon=?,selesaiDiskon=?,diskon=? WHERE idLayanan=?",
+      "UPDATE layanan SET idPoli=?,namaLayanan=?,kategori=?,tarif=?,deskripsi=?,statusAktif=?,diskonAktif=?,namaEvent=?,nilaiDiskon=?,mulaiDiskon=?,selesaiDiskon=?,diskon=? WHERE idLayanan=?",
       [...params(d), id],
     );
     return { success: true, message: "Layanan berhasil diperbarui." };
   } catch (e) {
-    if (isMySQLDuplicateError(e))
-      return { success: false, error: "Kode layanan sudah digunakan." };
     return handleServiceError(e, "Terjadi kesalahan saat memperbarui layanan.");
   }
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { getKaryawanTanpaAkunAction } from "@/actions/akun";
+import { getFiturListAction } from "@/actions/hak-akses";
 import AkunForm from "@/components/akun/AkunForm";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -15,7 +16,10 @@ async function TambahAkunForm({
   const defaultKaryawanId =
     typeof sp.karyawan === "string" ? Number(sp.karyawan) : undefined;
 
-  const result = await getKaryawanTanpaAkunAction();
+  const [result, fitur] = await Promise.all([
+    getKaryawanTanpaAkunAction(),
+    getFiturListAction(),
+  ]);
   if (!result.success || !result.data) {
     return (
       <ErrorBox
@@ -43,6 +47,7 @@ async function TambahAkunForm({
       mode="create"
       karyawanOptions={result.data}
       defaultKaryawanId={defaultKaryawanId}
+      fitur={fitur.success ? (fitur.data ?? []) : []}
     />
   );
 }

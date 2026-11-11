@@ -14,29 +14,29 @@ const money = (label: string) =>
       .min(0, `${label} tidak boleh negatif`)
       .max(999999999),
   );
+// Kode layanan tidak diterima dari form: dibuat otomatis oleh server & tidak bisa diubah.
 export const layananSchema = z
   .object({
     namaLayanan: text("Nama layanan", 100),
-    kodeLayanan: text("Kode layanan", 20).regex(
-      /^[A-Z0-9-]+$/,
-      "Kode layanan hanya boleh huruf, angka, dan tanda hubung",
-    ),
     idPoli: z.preprocess(
       (v) => Number(v),
       z.number().int().positive("Pilih poli"),
     ),
     kategori: text("Kategori", 50),
     tarif: money("Tarif"),
-    estimasiDurasi: z.preprocess(
-      (v) => Number(v),
-      z.number().int().positive("Durasi harus lebih dari 0").max(1440),
-    ),
     deskripsi: z.string().trim().max(1000),
     statusAktif: z.preprocess((v) => v === "1", z.boolean()),
     diskonAktif: z.preprocess((v) => v === "1", z.boolean()),
     namaEvent: z.string().trim().max(100),
-    jenisDiskon: z.enum(["persen", "nominal"]),
-    nilaiDiskon: money("Nilai diskon"),
+    // Diskon event selalu dalam persen
+    nilaiDiskon: z.preprocess(
+      (v) => Number(v),
+      z
+        .number({ error: "Nilai diskon tidak valid" })
+        .finite()
+        .min(0, "Nilai diskon tidak boleh negatif")
+        .max(100, "Diskon maksimal 100%"),
+    ),
     mulaiDiskon: z.string(),
     selesaiDiskon: z.string(),
   })
@@ -48,11 +48,11 @@ export const layananSchema = z
         path: ["namaEvent"],
         message: "Nama event wajib diisi",
       });
-    if (d.jenisDiskon === "persen" && d.nilaiDiskon > 100)
+    if (d.nilaiDiskon <= 0)
       ctx.addIssue({
         code: "custom",
         path: ["nilaiDiskon"],
-        message: "Diskon persen maksimal 100%",
+        message: "Nilai diskon harus lebih dari 0%",
       });
     if (!d.mulaiDiskon || !d.selesaiDiskon)
       ctx.addIssue({

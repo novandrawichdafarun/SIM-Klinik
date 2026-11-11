@@ -1,12 +1,12 @@
 "use client";
 
+import { toast } from "@/components/feedback/toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { CircleCheck, Info, Search } from "lucide-react";
+import { Info, Search } from "lucide-react";
 import { saveHakAksesAction } from "@/actions/hak-akses";
 import Avatar from "@/components/ui/Avatar";
-import ErrorBox from "@/components/ui/ErrorBox";
 import type { UserRole } from "@/types/auth";
 import {
   AKSI_HAK_AKSES,
@@ -185,8 +185,6 @@ function MatriksEditor({
   const isSuperAdmin = pengguna.role === "super_admin";
 
   const [matriks, setMatriks] = useState<MatriksHakAkses>(detail.matriks);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -208,7 +206,6 @@ function MatriksEditor({
   }, [fitur]);
 
   function toggle(kode: string, aksi: AksiHakAkses, checked: boolean) {
-    setMessage(null);
     setMatriks((prev) => {
       const izin = { ...prev[kode] };
       if (aksi === "lihat" && !checked) {
@@ -223,16 +220,14 @@ function MatriksEditor({
   }
 
   async function handleSave() {
-    setError(null);
-    setMessage(null);
     setIsSaving(true);
     const result = await saveHakAksesAction(pengguna.idUser, matriks);
     setIsSaving(false);
     if (!result.success) {
-      setError(result.error);
+      toast.error(result.error);
       return;
     }
-    setMessage(result.message ?? "Hak akses berhasil disimpan.");
+    toast.success(result.message ?? "Hak akses berhasil disimpan.");
     startTransition(() => router.refresh());
   }
 
@@ -379,8 +374,6 @@ function MatriksEditor({
               disabled={!dirty || isSaving}
               onClick={() => {
                 setMatriks(detail.matriks);
-                setError(null);
-                setMessage(null);
               }}
               className="h-10 rounded-lg bg-surface-hover px-5 text-sm font-semibold hover:bg-surface-hover disabled:opacity-50"
             >
@@ -398,17 +391,6 @@ function MatriksEditor({
         )}
       </footer>
 
-      {(error || message) && (
-        <div className="px-5 pb-5" aria-live="polite">
-          {error ? (
-            <ErrorBox message={error} />
-          ) : (
-            <p className="flex items-center gap-2 rounded-xl bg-accent-soft p-3 text-sm text-accent-ink">
-              <CircleCheck aria-hidden="true" size={16} /> {message}
-            </p>
-          )}
-        </div>
-      )}
     </section>
   );
 }

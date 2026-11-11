@@ -4,7 +4,7 @@ import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 import { Save } from "lucide-react";
 import { saveKaryawanAction } from "@/actions/karyawan";
-import ErrorBox from "@/components/ui/ErrorBox";
+import { useFeedbackAksi } from "@/components/feedback/useFeedbackAksi";
 import type { ActionResponse } from "@/types/action";
 import type { KaryawanFormValues, Poli } from "@/types/karyawan";
 
@@ -95,6 +95,7 @@ export default function KaryawanForm({
     saveKaryawanAction.bind(null, idKaryawan),
     null,
   );
+  useFeedbackAksi(state);
 
   return (
     <form
@@ -107,7 +108,6 @@ export default function KaryawanForm({
       }}
       className="space-y-5"
     >
-      {state && !state.success && <ErrorBox message={state.error} />}
 
       <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
         <h2 className="mb-4 text-[15px] font-bold">Identitas</h2>
