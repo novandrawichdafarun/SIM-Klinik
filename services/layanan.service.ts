@@ -1,16 +1,142 @@
-import { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import { getMySQLPool } from "@/database/mysql-client";
-import { mysqlTransaction, isMySQLDuplicateError } from "@/utils/mysql";
-import { handleServiceError } from "@/utils/error";
-import type { ActionResponse } from "@/types/action";
-import type { Layanan } from "@/types/layanan";
+import type { Layanan, ServiceDiscountType } from "@/types/layanan";
 import type { LayananInput } from "@/schemas/layanan.schema";
+import type { ActionResponse } from "@/types/action";
+import { handleServiceError } from "@/utils/error";
+import { isMySQLDuplicateError } from "@/utils/mysql";
 
-const select = `SELECT l.idLayanan, l.idPoli, l.idKeuangan, l.namaLayanan, l.porsiDokter, l.diskon, p.namaPoli, k.nominal AS tarif, k.kategori FROM layanan l JOIN poli p ON p.idPoli = l.idPoli LEFT JOIN keuangan k ON k.idTransaksi = l.idKeuangan`;
-function map(row: RowDataPacket): Layanan { return { id: row.idLayanan, code: `LYN-${String(row.idLayanan).padStart(3, "0")}`, name: row.namaLayanan, poliId: row.idPoli, poli: row.namaPoli, category: row.kategori ?? "Layanan", price: Number(row.tarif ?? 0), discount: Number(row.diskon ?? 0) }; }
-export async function getLayananListService(q = "", poli = "Semua", discount = false): Promise<ActionResponse<Layanan[]>> { try { const c: string[] = []; const v: unknown[] = []; if (q.trim()) { c.push("(l.namaLayanan LIKE ? OR CAST(l.idLayanan AS CHAR) LIKE ?)"); v.push(`%${q.trim()}%`, `%${q.trim()}%`); } if (poli !== "Semua") { c.push("p.namaPoli = ?"); v.push(poli); } if (discount) c.push("l.diskon > 0"); const [rows] = await getMySQLPool().query<RowDataPacket[]>(`${select}${c.length ? ` WHERE ${c.join(" AND ")}` : ""} ORDER BY l.idLayanan`, v); return { success: true, data: rows.map(map) }; } catch (error) { return handleServiceError(error, "Terjadi kesalahan saat mengambil katalog layanan."); } }
-export async function getLayananByIdService(id: number): Promise<ActionResponse<Layanan>> { try { const [rows] = await getMySQLPool().execute<RowDataPacket[]>(`${select} WHERE l.idLayanan = ? LIMIT 1`, [id]); return rows[0] ? { success: true, data: map(rows[0]) } : { success: false, error: "Layanan tidak ditemukan." }; } catch (error) { return handleServiceError(error, "Terjadi kesalahan saat mengambil layanan."); } }
-function checkInput(input: LayananInput): string | null { return input.diskon > 100 ? "Diskon maksimal 100%." : null; }
-export async function createLayananService(input: LayananInput): Promise<ActionResponse> { try { const invalid = checkInput(input); if (invalid) return { success: false, error: invalid }; await mysqlTransaction(async (conn) => { const [keuangan] = await conn.execute<ResultSetHeader>({ sql: "INSERT INTO keuangan (jenisTransaksi, kategori, nominal, tglTransaksi) VALUES (?, ?, ?, CURDATE())", values: ["Pendapatan layanan", input.kategori, input.tarif] }); await conn.execute({ sql: "INSERT INTO layanan (idPoli, idKeuangan, namaLayanan, porsiDokter, diskon) VALUES (?, ?, ?, 0, ?)", values: [input.idPoli, keuangan.insertId, input.namaLayanan, input.diskon] }); }); return { success: true, message: "Layanan berhasil ditambahkan." }; } catch (error) { if (isMySQLDuplicateError(error)) return { success: false, error: "Layanan sudah terdaftar." }; return handleServiceError(error, "Terjadi kesalahan saat menambahkan layanan."); } }
-export async function updateLayananService(id: number, input: LayananInput): Promise<ActionResponse> { try { const invalid = checkInput(input); if (invalid) return { success: false, error: invalid }; await mysqlTransaction(async (conn) => { const [rows] = await conn.execute<RowDataPacket[]>({ sql: "SELECT idKeuangan FROM layanan WHERE idLayanan = ? FOR UPDATE", values: [id] }); if (!rows[0]) throw new Error("Layanan tidak ditemukan."); await conn.execute({ sql: "UPDATE layanan SET idPoli = ?, namaLayanan = ?, diskon = ? WHERE idLayanan = ?", values: [input.idPoli, input.namaLayanan, input.diskon, id] }); if (rows[0].idKeuangan) await conn.execute({ sql: "UPDATE keuangan SET kategori = ?, nominal = ? WHERE idTransaksi = ?", values: [input.kategori, input.tarif, rows[0].idKeuangan] }); }); return { success: true, message: "Layanan berhasil diperbarui." }; } catch (error) { return handleServiceError(error, "Terjadi kesalahan saat memperbarui layanan."); } }
-export async function deleteLayananService(id: number): Promise<ActionResponse> { try { const [result] = await getMySQLPool().execute<ResultSetHeader>("DELETE FROM layanan WHERE idLayanan = ?", [id]); return result.affectedRows ? { success: true, message: "Layanan berhasil dihapus." } : { success: false, error: "Layanan tidak ditemukan." }; } catch (error) { return handleServiceError(error, "Layanan tidak dapat dihapus karena sudah digunakan."); } }
+const select =
+  "SELECT l.*, p.namaPoli FROM layanan l JOIN poli p ON p.idPoli = l.idPoli";
+function map(row: RowDataPacket): Layanan {
+  return {
+    id: row.idLayanan,
+    code: row.kodeLayanan,
+    name: row.namaLayanan,
+    poliId: row.idPoli,
+    poli: row.namaPoli,
+    category: row.kategori,
+    price: Number(row.tarif),
+    duration: row.estimasiDurasi,
+    description: row.deskripsi ?? "",
+    active: row.statusAktif,
+    discount: {
+      enabled: row.diskonAktif,
+      eventName: row.namaEvent ?? "",
+      type: row.jenisDiskon as ServiceDiscountType,
+      value: Number(row.nilaiDiskon),
+      startDate: row.mulaiDiskon ?? "",
+      endDate: row.selesaiDiskon ?? "",
+    },
+  };
+}
+export async function getLayananListService(
+  q = "",
+  poli = "Semua",
+  discount = false,
+): Promise<ActionResponse<Layanan[]>> {
+  try {
+    const c: string[] = [];
+    const v: unknown[] = [];
+    if (q.trim()) {
+      c.push("(l.namaLayanan LIKE ? OR l.kodeLayanan LIKE ?)");
+      v.push(`%${q.trim()}%`, `%${q.trim()}%`);
+    }
+    if (poli !== "Semua") {
+      c.push("p.namaPoli = ?");
+      v.push(poli);
+    } // `diskon` adalah kolom lama yang tetap dipelihara sebagai kompatibilitas migrasi.
+    if (discount) c.push("l.diskon > 0");
+    const [rows] = await getMySQLPool().query<RowDataPacket[]>(
+      `${select}${c.length ? ` WHERE ${c.join(" AND ")}` : ""} ORDER BY l.idLayanan`,
+      v,
+    );
+    return { success: true, data: rows.map(map) };
+  } catch (e) {
+    return handleServiceError(
+      e,
+      "Terjadi kesalahan saat mengambil katalog layanan.",
+    );
+  }
+}
+export async function getLayananByIdService(
+  id: number,
+): Promise<ActionResponse<Layanan>> {
+  try {
+    const [rows] = await getMySQLPool().execute<RowDataPacket[]>(
+      `${select} WHERE l.idLayanan = ? LIMIT 1`,
+      [id],
+    );
+    return rows[0]
+      ? { success: true, data: map(rows[0]) }
+      : { success: false, error: "Layanan tidak ditemukan." };
+  } catch (e) {
+    return handleServiceError(e, "Terjadi kesalahan saat mengambil layanan.");
+  }
+}
+const params = (d: LayananInput) => [
+  d.kodeLayanan,
+  d.idPoli,
+  d.namaLayanan,
+  d.kategori,
+  d.tarif,
+  d.estimasiDurasi,
+  d.deskripsi || null,
+  d.statusAktif,
+  d.diskonAktif,
+  d.namaEvent || null,
+  d.jenisDiskon,
+  d.nilaiDiskon,
+  d.mulaiDiskon || null,
+  d.selesaiDiskon || null,
+  d.diskonAktif && d.jenisDiskon === "persen" ? d.nilaiDiskon : 0,
+];
+export async function createLayananService(
+  d: LayananInput,
+): Promise<ActionResponse> {
+  try {
+    await getMySQLPool().execute(
+      "INSERT INTO layanan (kodeLayanan,idPoli,namaLayanan,kategori,tarif,estimasiDurasi,deskripsi,statusAktif,diskonAktif,namaEvent,jenisDiskon,nilaiDiskon,mulaiDiskon,selesaiDiskon,porsiDokter,diskon) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)",
+      params(d),
+    );
+    return { success: true, message: "Layanan berhasil ditambahkan." };
+  } catch (e) {
+    if (isMySQLDuplicateError(e))
+      return { success: false, error: "Kode layanan sudah digunakan." };
+    return handleServiceError(e, "Terjadi kesalahan saat menambahkan layanan.");
+  }
+}
+export async function updateLayananService(
+  id: number,
+  d: LayananInput,
+): Promise<ActionResponse> {
+  try {
+    await getMySQLPool().execute(
+      "UPDATE layanan SET kodeLayanan=?,idPoli=?,namaLayanan=?,kategori=?,tarif=?,estimasiDurasi=?,deskripsi=?,statusAktif=?,diskonAktif=?,namaEvent=?,jenisDiskon=?,nilaiDiskon=?,mulaiDiskon=?,selesaiDiskon=?,diskon=? WHERE idLayanan=?",
+      [...params(d), id],
+    );
+    return { success: true, message: "Layanan berhasil diperbarui." };
+  } catch (e) {
+    if (isMySQLDuplicateError(e))
+      return { success: false, error: "Kode layanan sudah digunakan." };
+    return handleServiceError(e, "Terjadi kesalahan saat memperbarui layanan.");
+  }
+}
+export async function deleteLayananService(
+  id: number,
+): Promise<ActionResponse> {
+  try {
+    const [result] = await getMySQLPool().execute<ResultSetHeader>(
+      "DELETE FROM layanan WHERE idLayanan = ?",
+      [id],
+    );
+    return result.affectedRows
+      ? { success: true, message: "Layanan berhasil dihapus." }
+      : { success: false, error: "Layanan tidak ditemukan." };
+  } catch (e) {
+    return handleServiceError(
+      e,
+      "Layanan tidak dapat dihapus karena sudah digunakan.",
+    );
+  }
+}

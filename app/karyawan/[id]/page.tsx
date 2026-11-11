@@ -10,19 +10,31 @@ export const metadata = { title: "Detail Karyawan - ERM Klinik Pratama" };
 
 type Props = PageProps<"/karyawan/[id]">;
 
-async function DetailContent({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
+async function DetailContent({
+  params,
+  searchParams,
+}: Pick<Props, "params" | "searchParams">) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const idKaryawan = Number(id);
   if (!Number.isInteger(idKaryawan) || idKaryawan <= 0) notFound();
 
-  const periode = typeof sp.periode === "string" ? Number(sp.periode) : undefined;
+  const periode =
+    typeof sp.periode === "string" ? Number(sp.periode) : undefined;
   const result = await getKaryawanDetailAction(idKaryawan, periode);
 
   if (!result.success || !result.data) {
     return (
       <>
-        <Breadcrumb items={[{ label: "Kelola Karyawan", href: "/karyawan" }, { label: "Detail" }]} />
-        <ErrorBox message={result.success ? "Data tidak tersedia." : result.error} />
+        <Breadcrumb
+          items={[
+            { label: "Beranda", href: "/dashboard" },
+            { label: "Kelola Karyawan", href: "/karyawan" },
+            { label: "Detail" },
+          ]}
+        />
+        <ErrorBox
+          message={result.success ? "Data tidak tersedia." : result.error}
+        />
       </>
     );
   }
@@ -31,6 +43,7 @@ async function DetailContent({ params, searchParams }: Pick<Props, "params" | "s
     <>
       <Breadcrumb
         items={[
+          { label: "Beranda", href: "/dashboard" },
           { label: "Kelola Karyawan", href: "/karyawan" },
           { label: result.data.karyawan.namaLengkap },
         ]}

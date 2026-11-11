@@ -141,7 +141,7 @@ export default function Sidebar({
             className="absolute inset-0 size-full bg-black/30"
             onClick={onClose}
           />
-          <aside className="relative h-full w-[260px] bg-surface p-4">
+          <aside className="relative h-full w-65 bg-surface p-4">
             <div className="flex items-center justify-between border-b pb-4">
               <Brand />
               <button aria-label="Tutup menu" onClick={onClose}>
