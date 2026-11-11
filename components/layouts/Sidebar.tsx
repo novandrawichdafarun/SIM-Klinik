@@ -44,12 +44,8 @@ const navGroups: NavGroup[] = [
     label: "LAYANAN",
     links: [
       { name: "Tarif Jasa Pelayanan", href: "#", icon: HandCoins },
-      {
-        name: "Katalog Layanan",
-        href: "/katalog-layanan",
-        icon: ClipboardList,
-      },
-      { name: "Laporan Layanan", href: "#", icon: FileBarChart },
+      { name: "Katalog Layanan", href: "/katalog-layanan", icon: ClipboardList },
+      { name: "Laporan Layanan", href: "/laporan-layanan", icon: FileBarChart },
     ],
   },
   {
