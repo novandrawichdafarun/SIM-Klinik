@@ -63,7 +63,7 @@ export default function Login() {
       >
         <section
           aria-labelledby="login-title"
-          className="relative z-10 w-full max-w-92.5 rounded-xl bg-surface px-7 py-8 shadow-high sm:px-10 sm:py-9"
+          className="relative z-10 w-full max-w-100 rounded-xl bg-surface px-7 py-8 shadow-high sm:px-10 sm:py-9"
         >
           <h1
             id="login-title"

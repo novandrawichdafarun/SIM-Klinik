@@ -8,13 +8,20 @@ import ErrorBox from "@/components/ui/ErrorBox";
 
 export const metadata = { title: "Tambah Akun - ERM Klinik Pratama" };
 
-async function TambahAkunForm({ searchParams }: Pick<PageProps<"/akun/tambah">, "searchParams">) {
+async function TambahAkunForm({
+  searchParams,
+}: Pick<PageProps<"/akun/tambah">, "searchParams">) {
   const sp = await searchParams;
-  const defaultKaryawanId = typeof sp.karyawan === "string" ? Number(sp.karyawan) : undefined;
+  const defaultKaryawanId =
+    typeof sp.karyawan === "string" ? Number(sp.karyawan) : undefined;
 
   const result = await getKaryawanTanpaAkunAction();
   if (!result.success || !result.data) {
-    return <ErrorBox message={result.success ? "Data tidak tersedia." : result.error} />;
+    return (
+      <ErrorBox
+        message={result.success ? "Data tidak tersedia." : result.error}
+      />
+    );
   }
 
   if (result.data.length === 0) {
@@ -40,13 +47,27 @@ async function TambahAkunForm({ searchParams }: Pick<PageProps<"/akun/tambah">, 
   );
 }
 
-export default function TambahAkunPage({ searchParams }: PageProps<"/akun/tambah">) {
+export default function TambahAkunPage({
+  searchParams,
+}: PageProps<"/akun/tambah">) {
   return (
     <AppShell>
       <main className="mx-auto max-w-3xl px-4 py-4.5 md:px-6 md:py-6">
-        <Breadcrumb items={[{ label: "Kelola Akun", href: "/akun" }, { label: "Tambah Akun" }]} />
-        <h1 className="mb-6 text-[25px] font-bold tracking-tight md:text-[28px]">Tambah Akun</h1>
-        <Suspense fallback={<div className="h-80 animate-pulse rounded-xl bg-surface" />}>
+        <Breadcrumb
+          items={[
+            { label: "Beranda", href: "/dashboard" },
+            { label: "Kelola Akun", href: "/akun" },
+            { label: "Tambah Akun" },
+          ]}
+        />
+        <h1 className="mb-6 text-[25px] font-bold tracking-tight md:text-[28px]">
+          Tambah Akun
+        </h1>
+        <Suspense
+          fallback={
+            <div className="h-80 animate-pulse rounded-xl bg-surface" />
+          }
+        >
           <TambahAkunForm searchParams={searchParams} />
         </Suspense>
       </main>
