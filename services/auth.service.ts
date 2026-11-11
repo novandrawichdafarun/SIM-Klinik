@@ -16,8 +16,10 @@ export const loginUserService = async (
     const pool = getMySQLPool();
 
     const [userRows] = await pool.execute<RowDataPacket[]>({
-      sql: `SELECT id_user, email, password, role
-         FROM users WHERE email = ? LIMIT 1`,
+      sql: `SELECT u.id_user, u.email, u.password, u.role, u.is_active, k.statusAktif
+         FROM users u
+         LEFT JOIN karyawan k ON k.id_user = u.id_user
+         WHERE u.email = ? LIMIT 1`,
       values: [email],
     });
     const user = userRows[0];
@@ -33,6 +35,14 @@ export const loginUserService = async (
       return {
         success: false,
         error: "Kredensial tidak valid (Kata sandi salah)",
+      };
+    }
+
+    // Dicek setelah kata sandi benar supaya status akun tidak bocor ke orang lain
+    if (user.is_active === false || user.statusAktif === false) {
+      return {
+        success: false,
+        error: "Akun Anda dinonaktifkan. Hubungi Pimpinan Klinik.",
       };
     }
 
@@ -62,6 +72,11 @@ export const loginUserService = async (
       sql: `INSERT INTO user_sessions (id_user, session_token, device_info)
          VALUES (?, ?, ?)`,
       values: [user.id_user, newSessionToken, userAgent],
+    });
+
+    await pool.execute({
+      sql: "UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id_user = ?",
+      values: [user.id_user],
     });
 
     return {

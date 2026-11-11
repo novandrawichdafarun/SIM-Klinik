@@ -1,17 +1,91 @@
 @import "tailwindcss";
 
+/* Varian `dark:` mengikuti class "dark" di <html> (diatur next-themes), bukan media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Token warna semantik. Komponen memakai nama token (bg-surface, text-ink, border-line, ...)
+ * sehingga tema gelap cukup mengganti nilai di blok .dark — tanpa `dark:` di setiap class.
+ */
 :root {
   --primary: #00c063;
   --secondary: #00c8b3;
-  --background: #fbf7f1;
-  --foreground: #120b24;
   --success: #82efa2;
   --warning: #efa382;
   --danger: #ef8282;
 
+  /* Permukaan */
+  --background: #fbf8f3; /* latar halaman */
+  --surface: #ffffff; /* kartu, tabel, header, sidebar */
+  --surface-muted: #f8f5fb; /* kepala tabel, input, isian lembut */
+  --surface-hover: #f2edf7; /* hover baris / tombol netral */
+  --line: #ebe5f1; /* garis & border */
+
+  /* Teks */
+  --foreground: #1d1930;
+  --ink: #1d1930; /* teks utama */
+  --ink-2: #4a4658; /* teks sekunder */
+  --ink-3: #6b6779; /* teks redup, label sumbu */
+  --ink-faint: #c9c4d1; /* ikon nonaktif */
+
+  /* Aksen hijau (badge, highlight) */
+  --accent-soft: #d3f5e5;
+  --accent-ink: #075b38;
+  --avatar: #cdf1ea;
+  --avatar-ink: #0b4d3c;
+  --info-soft: #dcf1e8;
+  --info-ink: #1f3d33;
+
+  /* Status */
+  --danger-soft: #fef2f2;
+  --danger-line: #fecaca;
+  --danger-ink: #b91c1c;
+  --neutral-soft: #ecebef;
+
+  /* Grafik: lolos kontras 3:1 di permukaan terang & gelap */
+  --chart: #00a352;
+  --chart-track: #e3f5ec;
+
   --shadow-low: 0 2px 4px 0 rgba(18, 11, 36, 0.04);
   --shadow-mid: 0 4px 12px 0 rgba(18, 11, 36, 0.08);
   --shadow-high: 0 16px 32px 4px rgba(18, 11, 36, 0.12);
+
+  color-scheme: light;
+}
+
+.dark {
+  --background: #0f0d16;
+  --surface: #17151f;
+  --surface-muted: #1e1b28;
+  --surface-hover: #262233;
+  --line: #2c2838;
+
+  --foreground: #ece9f3;
+  --ink: #ece9f3;
+  --ink-2: #c3bed0;
+  --ink-3: #9a95a8;
+  --ink-faint: #4f4a5c;
+
+  --accent-soft: #123a2a;
+  --accent-ink: #7fe0b2;
+  --avatar: #164237;
+  --avatar-ink: #a5ecd6;
+  --info-soft: #14302a;
+  --info-ink: #b4e9d3;
+
+  --danger-soft: #3a1618;
+  --danger-line: #6b2427;
+  --danger-ink: #fca5a5;
+  --neutral-soft: #2a2735;
+
+  --chart: #00a352;
+  --chart-track: #1d3a2d;
+
+  --shadow-low: 0 2px 4px 0 rgba(0, 0, 0, 0.3);
+  --shadow-mid: 0 4px 12px 0 rgba(0, 0, 0, 0.35);
+  --shadow-high: 0 16px 32px 4px rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -22,6 +96,28 @@
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-faint: var(--ink-faint);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-avatar: var(--avatar);
+  --color-avatar-ink: var(--avatar-ink);
+  --color-info-soft: var(--info-soft);
+  --color-info-ink: var(--info-ink);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+  --color-danger-ink: var(--danger-ink);
+  --color-neutral-soft: var(--neutral-soft);
+  --color-chart: var(--chart);
+  --color-chart-track: var(--chart-track);
+
   --font-sans: var(--font-inter);
 }
 

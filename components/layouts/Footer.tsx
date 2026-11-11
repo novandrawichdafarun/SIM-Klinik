@@ -3,11 +3,11 @@ const footerLinkClass =
 
 export default function Footer() {
   return (
-    <footer className="shrink-0 bg-[#f7f0ff] px-6 py-8 md:px-7 md:py-7">
+    <footer className="shrink-0 bg-surface-muted px-6 py-8 md:px-7 md:py-7">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4 md:gap-6">
         <section>
           <h2 className="mb-3 flex items-center gap-2 text-sm font-bold">
-            <span className="flex size-4 items-center justify-center rounded-sm border-2 border-[#008d4c] text-xs font-bold leading-none text-[#008d4c]">
+            <span className="flex size-4 items-center justify-center rounded-sm border-2 border-accent-ink text-xs font-bold leading-none text-accent-ink">
               +
             </span>
             KlinikPulse SIM Faskes
@@ -17,7 +17,7 @@ export default function Footer() {
             percepatan transformasi digital layanan primer dan rujukan
             Indonesia.
           </p>
-          <span className="mt-3 inline-flex rounded-full bg-[#efe4fc] px-3 py-1 text-[10px] font-medium">
+          <span className="mt-3 inline-flex rounded-full bg-surface-hover px-3 py-1 text-[10px] font-medium">
             ◎ &nbsp; Terakreditasi KARS Paripurna &amp; Kemenkes RI
           </span>
         </section>
