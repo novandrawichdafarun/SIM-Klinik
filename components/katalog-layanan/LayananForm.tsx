@@ -1,5 +1,4 @@
 "use client";
-/* eslint-disable react/jsx-key */
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { saveLayananAction } from "@/actions/layanan";
@@ -62,6 +61,7 @@ export default function LayananForm({
             [
               "Nama layanan",
               <input
+                key="name"
                 required
                 value={f.name}
                 onChange={(e) => set("name", e.target.value)}
@@ -71,6 +71,7 @@ export default function LayananForm({
             [
               "Kode layanan",
               <input
+                key="code"
                 required
                 value={f.code}
                 onChange={(e) => set("code", e.target.value.toUpperCase())}
@@ -80,6 +81,7 @@ export default function LayananForm({
             [
               "Jenis poli",
               <select
+                key="poli"
                 value={f.poliId}
                 onChange={(e) => set("poliId", Number(e.target.value))}
                 className={input}
@@ -94,6 +96,7 @@ export default function LayananForm({
             [
               "Kategori",
               <select
+                key="category"
                 value={f.category}
                 onChange={(e) => set("category", e.target.value)}
                 className={input}
@@ -108,6 +111,7 @@ export default function LayananForm({
             [
               "Tarif",
               <input
+                key="price"
                 required
                 type="number"
                 min="0"
@@ -119,6 +123,7 @@ export default function LayananForm({
             [
               "Estimasi durasi",
               <input
+                key="duration"
                 required
                 type="number"
                 min="1"
