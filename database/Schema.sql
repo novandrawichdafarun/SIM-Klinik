@@ -124,12 +124,25 @@ CREATE TABLE `layanan` (
   `idLayanan` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `idPoli` INT UNSIGNED NOT NULL,
   `idKeuangan` BIGINT UNSIGNED NULL,
+  `kodeLayanan` VARCHAR(20) NOT NULL,
   `namaLayanan` VARCHAR(100) NOT NULL,
+  `kategori` VARCHAR(50) NOT NULL,
+  `tarif` DECIMAL(15,2) NOT NULL DEFAULT 0,
+  `estimasiDurasi` SMALLINT UNSIGNED NOT NULL DEFAULT 15,
+  `deskripsi` TEXT NULL,
+  `statusAktif` BOOLEAN NOT NULL DEFAULT TRUE,
   `porsiDokter` DECIMAL(5,2) NOT NULL,
   `diskon` DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  `diskonAktif` BOOLEAN NOT NULL DEFAULT FALSE,
+  `namaEvent` VARCHAR(100) NULL,
+  `jenisDiskon` ENUM('persen', 'nominal') NOT NULL DEFAULT 'persen',
+  `nilaiDiskon` DECIMAL(15,2) NOT NULL DEFAULT 0,
+  `mulaiDiskon` DATE NULL,
+  `selesaiDiskon` DATE NULL,
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`idLayanan`),
+  UNIQUE KEY `uk_layanan_kode` (`kodeLayanan`),
   UNIQUE KEY `uk_layanan_keuangan` (`idKeuangan`),
   KEY `idx_layanan_poli_nama` (`idPoli`, `namaLayanan`),
   CONSTRAINT `fk_layanan_poli`
@@ -139,7 +152,11 @@ CREATE TABLE `layanan` (
   CONSTRAINT `chk_layanan_porsi_dokter`
     CHECK (`porsiDokter` BETWEEN 0 AND 100),
   CONSTRAINT `chk_layanan_diskon`
-    CHECK (`diskon` BETWEEN 0 AND 100)
+    CHECK (`diskon` BETWEEN 0 AND 100),
+  CONSTRAINT `chk_layanan_tarif`
+    CHECK (`tarif` >= 0),
+  CONSTRAINT `chk_layanan_nilai_diskon`
+    CHECK (`nilaiDiskon` >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `invoice` (

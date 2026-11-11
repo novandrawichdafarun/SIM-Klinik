@@ -9,6 +9,15 @@ INSERT INTO `poli` (`idPoli`, `namaPoli`) VALUES
 (1, 'Poli Umum'),
 (2, 'Poli Gigi');
 
+INSERT IGNORE INTO layanan (idPoli, kodeLayanan, namaLayanan, kategori, tarif, estimasiDurasi, deskripsi, statusAktif, porsiDokter, diskon, diskonAktif, namaEvent, jenisDiskon, nilaiDiskon, mulaiDiskon, selesaiDiskon) VALUES
+(1, 'LYN-U01', 'Pemeriksaan umum', 'Pemeriksaan', 100000, 15, 'Pemeriksaan fisik umum oleh dokter beserta konsultasi singkat.', TRUE, 0, 20, TRUE, 'Hari Kesehatan Nasional', 'persen', 20, '2026-11-10', '2026-11-16'),
+(1, 'LYN-U02', 'Konsultasi gizi', 'Konsultasi', 75000, 30, 'Konsultasi gizi dan pola hidup sehat.', TRUE, 0, 20, TRUE, 'Hari Kesehatan Nasional', 'persen', 20, '2026-11-10', '2026-11-16'),
+(1, 'LYN-U03', 'Nebulisasi', 'Tindakan', 85000, 20, 'Tindakan nebulisasi sesuai indikasi dokter.', TRUE, 0, 0, FALSE, NULL, 'persen', 0, NULL, NULL),
+(1, 'LYN-U04', 'Cek gula darah', 'Laboratorium', 50000, 10, 'Pemeriksaan kadar gula darah.', TRUE, 0, 0, FALSE, NULL, 'persen', 0, NULL, NULL),
+(2, 'LYN-G01', 'Tambal gigi', 'Tindakan', 250000, 45, 'Penambalan gigi sesuai hasil pemeriksaan.', TRUE, 0, 0, FALSE, NULL, 'persen', 0, NULL, NULL),
+(2, 'LYN-G02', 'Cabut gigi', 'Tindakan', 300000, 45, 'Pencabutan gigi oleh dokter gigi.', TRUE, 0, 0, FALSE, NULL, 'persen', 0, NULL, NULL),
+(2, 'LYN-G03', 'Scaling', 'Tindakan', 350000, 60, 'Pembersihan karang gigi.', TRUE, 0, 0, TRUE, 'Promo November', 'nominal', 50000, '2026-11-01', '2026-11-30');
+
 -- Data master fitur (dibutuhkan aplikasi, bukan data dummy)
 INSERT INTO `fitur` (`kodeFitur`, `namaFitur`, `deskripsi`, `grup`, `urutan`, `khususSuperAdmin`) VALUES
 ('rekap_pasien',     'Rekap Pasien & Detail Layanan', 'Riwayat kunjungan dan layanan per pasien dari CRM', 'Pelayanan Pasien', 1, FALSE),
