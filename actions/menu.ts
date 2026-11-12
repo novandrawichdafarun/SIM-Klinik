@@ -10,6 +10,7 @@ const FITUR_MENU = [
   "reimburse",
   "invoice_digital",
   "arus_kas",
+  "katalog_layanan",
 ] as const satisfies readonly KodeFitur[];
 
 export interface AksesMenu {

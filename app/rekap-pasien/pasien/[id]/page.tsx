@@ -25,7 +25,7 @@ async function DetailContent({ params }: Pick<PageProps<"/rekap-pasien/pasien/[i
           { label: res.data.pasien.namaLengkap },
         ]}
       />
-      <PasienDetailView {...res.data} />
+      <PasienDetailView key={res.data.pasien.idPasien} {...res.data} />
     </>
   );
 }

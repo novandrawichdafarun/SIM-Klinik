@@ -165,7 +165,7 @@ export default function KunjunganView({
                     </Link>
                   ) : (
                     <Link
-                      href={`/rekap-pasien/pasien/${k.idPasien}`}
+                      href={`/rekap-pasien/${k.idPasien}`}
                       aria-label={`Lihat pasien ${k.namaPasien}`}
                       className="inline-grid size-8 place-items-center rounded-lg text-ink-2 hover:bg-surface-hover"
                     >

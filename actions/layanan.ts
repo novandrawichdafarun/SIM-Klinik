@@ -1,6 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
-import { requireSuperAdmin } from "@/libs/authz";
+import { requirePermission } from "@/libs/authz";
 import { setFlash } from "@/libs/flash";
 import { layananSchema } from "@/schemas/layanan.schema";
 import {
@@ -19,7 +19,7 @@ export async function getLayananListAction(p: {
   discount?: boolean;
 }) {
   try {
-    await requireSuperAdmin();
+    await requirePermission("katalog_layanan", "lihat");
     return getLayananListService(
       p.q ?? "",
       p.poli ?? "Semua",
@@ -31,7 +31,7 @@ export async function getLayananListAction(p: {
 }
 export async function getLayananByIdAction(id: number) {
   try {
-    await requireSuperAdmin();
+    await requirePermission("katalog_layanan", "lihat");
     return getLayananByIdService(id);
   } catch (e) {
     return handleActionError(e, "Gagal mengambil layanan.");
@@ -43,7 +43,7 @@ export async function saveLayananAction(
   fd: FormData,
 ): Promise<ActionResponse> {
   try {
-    await requireSuperAdmin();
+    await requirePermission("katalog_layanan", id === null ? "tambah" : "ubah");
     const { data, error } = validateFormData(fd, layananSchema);
     if (error || !data)
       return { success: false, error: error || "Validasi gagal." };
@@ -60,7 +60,7 @@ export async function saveLayananAction(
 }
 export async function deleteLayananAction(id: number): Promise<ActionResponse> {
   try {
-    await requireSuperAdmin();
+    await requirePermission("katalog_layanan", "hapus");
     return deleteLayananService(id);
   } catch (e) {
     return handleActionError(e, "Gagal menghapus layanan.");

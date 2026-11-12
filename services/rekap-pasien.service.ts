@@ -10,12 +10,16 @@ import type {
 import { ActionResponse } from "@/types/action";
 import type {
   AntreanDiagnosa,
+  BiayaPemeriksaan,
+  ItemDiagnosa,
+  ItemDiagnosaTersimpan,
   KunjunganItem,
   PoliOption,
   Pasien,
   PasienRingkas,
   PetugasOption,
   RiwayatPenanganan,
+  RincianBiayaDiagnosa,
   StatusKunjungan,
   TindakanOption,
 } from "@/types/rekap-pasien";
@@ -29,6 +33,166 @@ class RekapError extends Error {}
 
 const tgl = (v: unknown) => (v ? String(v).slice(0, 10) : null);
 const jam = (v: unknown) => String(v ?? "").slice(0, 5);
+const RESEP_BIAYA_PREFIX = "SIMKLINIK-DIAGNOSA-BIAYA-V1:";
+
+function bulatkanUang(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function hitungItemDiagnosa(items: ItemDiagnosa[]): ItemDiagnosaTersimpan[] {
+  return items.map((item) => ({
+    ...item,
+    subtotal: bulatkanUang(item.jumlah * item.hargaSatuan),
+  }));
+}
+
+function parseRincianBiaya(value: unknown): RincianBiayaDiagnosa | null {
+  if (typeof value !== "string" || !value.startsWith(RESEP_BIAYA_PREFIX)) return null;
+  try {
+    const data: unknown = JSON.parse(value.slice(RESEP_BIAYA_PREFIX.length));
+    if (typeof data !== "object" || data === null) return null;
+    const r = data as Record<string, unknown>;
+    const biaya = r.biayaPemeriksaan;
+    if (typeof biaya !== "object" || biaya === null) return null;
+    const b = biaya as Record<string, unknown>;
+    const biayaValid =
+      Number.isSafeInteger(b.idLayanan) &&
+      typeof b.namaLayanan === "string" &&
+      typeof b.tarif === "number" &&
+      Number.isFinite(b.tarif) &&
+      typeof b.diskonPersen === "number" &&
+      Number.isFinite(b.diskonPersen) &&
+      typeof b.biaya === "number" &&
+      Number.isFinite(b.biaya);
+    const daftarValid = (items: unknown): items is ItemDiagnosaTersimpan[] =>
+      Array.isArray(items) &&
+      items.every(
+        (item) =>
+          typeof item === "object" &&
+          item !== null &&
+          "nama" in item &&
+          typeof item.nama === "string" &&
+          "jumlah" in item &&
+          typeof item.jumlah === "number" &&
+          Number.isFinite(item.jumlah) &&
+          "satuan" in item &&
+          typeof item.satuan === "string" &&
+          "hargaSatuan" in item &&
+          typeof item.hargaSatuan === "number" &&
+          Number.isFinite(item.hargaSatuan) &&
+          "subtotal" in item &&
+          typeof item.subtotal === "number" &&
+          Number.isFinite(item.subtotal),
+      );
+    const obat = r.obat;
+    const suntik = r.suntik;
+    if (
+      r.versi !== 1 ||
+      !biayaValid ||
+      !daftarValid(obat) ||
+      !daftarValid(suntik) ||
+      typeof r.totalObat !== "number" ||
+      !Number.isFinite(r.totalObat) ||
+      typeof r.totalSuntik !== "number" ||
+      !Number.isFinite(r.totalSuntik) ||
+      typeof r.total !== "number" ||
+      !Number.isFinite(r.total)
+    ) {
+      return null;
+    }
+    return {
+      versi: 1,
+      biayaPemeriksaan: {
+        idLayanan: Number(b.idLayanan),
+        namaLayanan: String(b.namaLayanan),
+        tarif: Number(b.tarif),
+        diskonPersen: Number(b.diskonPersen),
+        biaya: Number(b.biaya),
+      },
+      obat,
+      suntik,
+      totalObat: Number(r.totalObat),
+      totalSuntik: Number(r.totalSuntik),
+      total: Number(r.total),
+      resepLama: typeof r.resepLama === "string" ? r.resepLama : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function tampilkanResep(value: unknown): string | null {
+  if (typeof value !== "string" || !value) return null;
+  const rincian = parseRincianBiaya(value);
+  if (!rincian) return value;
+  const rupiah = (amount: number) =>
+    `Rp ${new Intl.NumberFormat("id-ID", { maximumFractionDigits: 2 }).format(amount)}`;
+  const lines = [
+    `Biaya pemeriksaan (${rincian.biayaPemeriksaan.namaLayanan}): ${rupiah(rincian.biayaPemeriksaan.biaya)}`,
+  ];
+  if (rincian.resepLama) lines.push(`Resep sebelumnya: ${rincian.resepLama}`);
+  for (const [label, items] of [
+    ["Obat", rincian.obat],
+    ["Suntik", rincian.suntik],
+  ] as const) {
+    for (const item of items) {
+      lines.push(
+        `${label}: ${item.nama} — ${item.jumlah} ${item.satuan} × ${rupiah(item.hargaSatuan)} = ${rupiah(item.subtotal)}`,
+      );
+    }
+  }
+  lines.push(
+    `Total obat: ${rupiah(rincian.totalObat)}`,
+    `Total suntik: ${rupiah(rincian.totalSuntik)}`,
+    `Total biaya: ${rupiah(rincian.total)}`,
+  );
+  return lines.join("\n");
+}
+
+const SQL_LAYANAN_PEMERIKSAAN = `
+  SELECT idLayanan, namaLayanan, tarif, diskonAktif, nilaiDiskon,
+         DATE_FORMAT(mulaiDiskon, '%Y-%m-%d') AS mulaiDiskon,
+         DATE_FORMAT(selesaiDiskon, '%Y-%m-%d') AS selesaiDiskon
+    FROM layanan
+   WHERE idPoli = ? AND statusAktif = TRUE
+     AND LOWER(kategori) IN ('pemeriksaan', 'konsultasi')
+   ORDER BY CASE LOWER(kategori) WHEN 'pemeriksaan' THEN 0 ELSE 1 END, idLayanan
+   LIMIT 1`;
+
+function hitungBiayaPemeriksaan(r: RowDataPacket, tanggal: string): BiayaPemeriksaan {
+  const tarif = Number(r.tarif);
+  const diskonAktif =
+    Boolean(r.diskonAktif) &&
+    Number(r.nilaiDiskon) > 0 &&
+    (!r.mulaiDiskon || String(r.mulaiDiskon) <= tanggal) &&
+    (!r.selesaiDiskon || String(r.selesaiDiskon) >= tanggal);
+  const diskonPersen = diskonAktif ? Number(r.nilaiDiskon) : 0;
+  return {
+    idLayanan: Number(r.idLayanan),
+    namaLayanan: String(r.namaLayanan),
+    tarif,
+    diskonPersen,
+    biaya: bulatkanUang(tarif * (1 - diskonPersen / 100)),
+  };
+}
+
+export async function getBiayaPemeriksaanService(
+  idPoli: number,
+  tanggal: string,
+): Promise<ActionResponse<BiayaPemeriksaan | null>> {
+  try {
+    const [rows] = await getMySQLPool().execute<RowDataPacket[]>(
+      SQL_LAYANAN_PEMERIKSAAN,
+      [idPoli],
+    );
+    if (!rows[0]) {
+      return { success: true, data: null };
+    }
+    return { success: true, data: hitungBiayaPemeriksaan(rows[0], tanggal) };
+  } catch (err) {
+    return handleServiceError(err, "Terjadi kesalahan saat mengambil tarif pemeriksaan.");
+  }
+}
 
 // ============================================================
 // Pasien
@@ -64,7 +228,9 @@ function toPasien(r: RowDataPacket): Pasien {
 function duplikatPasien(err: unknown): string | null {
   if (!isMySQLDuplicateError(err)) return null;
   const msg = (err as Error).message ?? "";
-  if (msg.includes("uk_pasien_nik")) return "NIK sudah terdaftar pada pasien lain.";
+  if (msg.includes("uk_pasien_nik")) {
+    return "NIK sudah terdaftar, periksa data pasien yang sudah ada";
+  }
   if (msg.includes("uk_pasien_no_bpjs"))
     return "Nomor kartu BPJS sudah terdaftar pada pasien lain.";
   return "Data pasien sudah ada.";
@@ -92,17 +258,45 @@ const KOLOM_PASIEN = [
   "fktpAsal",
 ] as const;
 
-const nilaiPasien = (d: PasienInput) =>
-  KOLOM_PASIEN.map((k) =>
-    // No. BPJS hanya disimpan untuk penjamin BPJS
-    k === "noBpjs" && d.jenisPenjamin !== "BPJS Kesehatan (JKN)" ? null : d[k],
-  );
+const nilaiKolomPasien = (k: (typeof KOLOM_PASIEN)[number], d: PasienInput) => {
+  if (k === "noBpjs" && d.jenisPenjamin !== "BPJS Kesehatan (JKN)") return null;
+  if (k === "noHp" && d.noHp) {
+    const angka = d.noHp.replace(/\D/g, "");
+    if (angka.startsWith("62")) return `+${angka}`;
+    return `+62${angka.startsWith("0") ? angka.slice(1) : angka}`;
+  }
+  return d[k];
+};
+const nilaiPasien = (d: PasienInput) => KOLOM_PASIEN.map((k) => nilaiKolomPasien(k, d));
 
 export const getPasienByIdService = async (idPasien: number): Promise<ActionResponse<Pasien>> => {
   try {
     const [rows] = await getMySQLPool().execute<RowDataPacket[]>(
       "SELECT * FROM pasien WHERE idPasien = ? LIMIT 1",
       [idPasien],
+    );
+    if (!rows[0]) return { success: false, error: "Pasien tidak ditemukan." };
+    return { success: true, data: toPasien(rows[0]) };
+  } catch (err) {
+    return handleServiceError(err, "Terjadi kesalahan saat mengambil data pasien.");
+  }
+};
+
+export const getPasienByIdUntukDokterService = async (
+  idPasien: number,
+  idDokter: number,
+): Promise<ActionResponse<Pasien>> => {
+  try {
+    const [rows] = await getMySQLPool().execute<RowDataPacket[]>(
+      `SELECT p.*
+         FROM pasien p
+        WHERE p.idPasien = ?
+          AND EXISTS (
+            SELECT 1 FROM kunjungan kj
+             WHERE kj.idPasien = p.idPasien AND kj.idDokter = ?
+          )
+        LIMIT 1`,
+      [idPasien, idDokter],
     );
     if (!rows[0]) return { success: false, error: "Pasien tidak ditemukan." };
     return { success: true, data: toPasien(rows[0]) };
@@ -136,6 +330,8 @@ export const createPasienService = async (
   }
 };
 
+const KOLOM_PASIEN_TANPA_NIK = KOLOM_PASIEN.filter((kolom) => kolom !== "NIK");
+
 /** Ubah pasien. No. RM tidak pernah ikut diubah (juga dikunci trigger DB). */
 export const updatePasienService = async (
   idPasien: number,
@@ -143,10 +339,19 @@ export const updatePasienService = async (
 ): Promise<ActionResponse> => {
   try {
     const [res] = await getMySQLPool().execute<ResultSetHeader>(
-      `UPDATE pasien SET ${KOLOM_PASIEN.map((k) => `${k} = ?`).join(", ")} WHERE idPasien = ?`,
-      [...nilaiPasien(d), idPasien],
+      `UPDATE pasien SET ${KOLOM_PASIEN_TANPA_NIK.map((k) => `${k} = ?`).join(", ")} WHERE idPasien = ?`,
+      [
+        ...KOLOM_PASIEN_TANPA_NIK.map((k) => nilaiKolomPasien(k, d)),
+        idPasien,
+      ],
     );
-    if (res.affectedRows === 0) return { success: false, error: "Pasien tidak ditemukan." };
+    if (res.affectedRows === 0) {
+      const [rows] = await getMySQLPool().execute<RowDataPacket[]>(
+        "SELECT idPasien FROM pasien WHERE idPasien = ? LIMIT 1",
+        [idPasien],
+      );
+      if (!rows[0]) return { success: false, error: "Pasien tidak ditemukan." };
+    }
     return { success: true, message: "Data pasien berhasil diperbarui." };
   } catch (err) {
     const dup = duplikatPasien(err);
@@ -157,21 +362,41 @@ export const updatePasienService = async (
 
 export const deletePasienService = async (idPasien: number): Promise<ActionResponse> => {
   try {
-    const [kj] = await getMySQLPool().execute<RowDataPacket[]>(
-      "SELECT COUNT(*) AS jumlah FROM kunjungan WHERE idPasien = ?",
-      [idPasien],
-    );
-    if (Number(kj[0].jumlah) > 0) {
-      return {
-        success: false,
-        error: "Pasien sudah memiliki riwayat kunjungan sehingga tidak dapat dihapus.",
-      };
+    const hasil = await mysqlTransaction(async (conn) => {
+      const [pasien] = await conn.execute<RowDataPacket[]>(
+        "SELECT idPasien FROM pasien WHERE idPasien = ? FOR UPDATE",
+        [idPasien],
+      );
+      if (!pasien[0]) return "tidak-ditemukan";
+
+      const [riwayat] = await conn.execute<RowDataPacket[]>(
+        `SELECT
+           EXISTS (SELECT 1 FROM kunjungan WHERE idPasien = ?) AS adaKunjungan,
+           EXISTS (
+             SELECT 1 FROM rekam_medis rm
+             JOIN kunjungan kj ON kj.idKunjungan = rm.idKunjungan
+              WHERE kj.idPasien = ?
+           ) AS adaRekamMedis,
+           EXISTS (
+             SELECT 1 FROM invoice i
+             JOIN kunjungan kj ON kj.idKunjungan = i.idKunjungan
+              WHERE kj.idPasien = ?
+           ) AS adaInvoice`,
+        [idPasien, idPasien, idPasien],
+      );
+      if (riwayat[0].adaKunjungan || riwayat[0].adaRekamMedis || riwayat[0].adaInvoice) {
+        return "memiliki-riwayat";
+      }
+
+      await conn.execute<ResultSetHeader>("DELETE FROM pasien WHERE idPasien = ?", [idPasien]);
+      return "terhapus";
+    });
+    if (hasil === "tidak-ditemukan") {
+      return { success: false, error: "Pasien tidak ditemukan." };
     }
-    const [res] = await getMySQLPool().execute<ResultSetHeader>(
-      "DELETE FROM pasien WHERE idPasien = ?",
-      [idPasien],
-    );
-    if (res.affectedRows === 0) return { success: false, error: "Pasien tidak ditemukan." };
+    if (hasil === "memiliki-riwayat") {
+      return { success: false, error: "Pasien memiliki riwayat kunjungan, tidak dapat dihapus" };
+    }
     return { success: true, message: "Pasien berhasil dihapus." };
   } catch (err) {
     return handleServiceError(err, "Terjadi kesalahan saat menghapus pasien.");
@@ -185,34 +410,49 @@ export const deletePasienService = async (idPasien: number): Promise<ActionRespo
 export const getPasienListService = async (opts: {
   q: string;
   idKaryawan: number | null;
+  idDokter?: number | null;
   denganDiagnosa: boolean;
 }): Promise<ActionResponse<PasienRingkas[]>> => {
   try {
     const where: string[] = [];
-    const values: unknown[] = [];
+    const whereValues: unknown[] = [];
+    if (opts.idDokter != null) {
+      where.push(`EXISTS (
+        SELECT 1 FROM kunjungan k2
+         WHERE k2.idPasien = p.idPasien AND k2.idDokter = ?
+      )`);
+      whereValues.push(opts.idDokter);
+    }
     if (opts.idKaryawan !== null) {
       where.push(`EXISTS (SELECT 1 FROM kunjungan k2 JOIN rekam_medis r2 ON r2.idKunjungan = k2.idKunjungan
                            WHERE k2.idPasien = p.idPasien AND (r2.idDokter = ? OR r2.idPerawat = ?))`);
-      values.push(opts.idKaryawan, opts.idKaryawan);
+      whereValues.push(opts.idKaryawan, opts.idKaryawan);
     }
     const q = opts.q.trim();
     if (q) {
       where.push("(p.namaLengkap LIKE ? OR p.NIK LIKE ? OR p.noBpjs LIKE ? OR p.NoRM LIKE ?)");
-      values.push(...Array(4).fill(`%${q}%`));
+      whereValues.push(...Array(4).fill(`%${q}%`));
     }
+    const filterDokterTerakhir = opts.idDokter == null ? "" : "AND kj.idDokter = ?";
+    const values: unknown[] = [
+      ...(opts.idDokter == null ? [] : [opts.idDokter]),
+      ...whereValues,
+    ];
 
     const [rows] = await getMySQLPool().query<RowDataPacket[]>(
       `SELECT p.idPasien, p.NoRM, p.namaLengkap, p.NIK, p.noBpjs,
-              terakhir.tglKunjungan AS pemeriksaanTerakhir, terakhir.diagnosa
+              terakhir.tglKunjungan AS pemeriksaanTerakhir, terakhir_rm.diagnosa
          FROM pasien p
-         LEFT JOIN LATERAL (
-           SELECT kj.tglKunjungan, rm.diagnosa
+         LEFT JOIN kunjungan terakhir
+           ON terakhir.idKunjungan = (
+           SELECT kj.idKunjungan
              FROM kunjungan kj
              JOIN rekam_medis rm ON rm.idKunjungan = kj.idKunjungan
-            WHERE kj.idPasien = p.idPasien
-            ORDER BY kj.tglKunjungan DESC, kj.jamKunjungan DESC
+            WHERE kj.idPasien = p.idPasien ${filterDokterTerakhir}
+            ORDER BY kj.tglKunjungan DESC, kj.jamKunjungan DESC, kj.idKunjungan DESC
             LIMIT 1
-         ) terakhir ON TRUE
+         )
+         LEFT JOIN rekam_medis terakhir_rm ON terakhir_rm.idKunjungan = terakhir.idKunjungan
         ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
         ORDER BY terakhir.tglKunjungan IS NULL, terakhir.tglKunjungan DESC, p.namaLengkap ASC
         LIMIT 200`,
@@ -231,7 +471,14 @@ export const getPasienListService = async (opts: {
       })),
     };
   } catch (err) {
-    return handleServiceError(err, "Terjadi kesalahan saat mengambil daftar pasien.");
+    const detail =
+      err && typeof err === "object" && "code" in err && typeof err.code === "string"
+        ? err.code
+        : err instanceof Error
+          ? err.name
+          : "Kesalahan tidak diketahui";
+    console.error("[getPasienListService] Gagal mengambil daftar pasien.", detail);
+    return { success: false, error: "Terjadi kesalahan saat mengambil daftar pasien." };
   }
 };
 
@@ -398,20 +645,23 @@ export const getKunjunganByIdService = async (
 export const getRiwayatPasienService = async (
   idPasien: number,
   denganDiagnosa: boolean,
+  idDokter?: number | null,
 ): Promise<ActionResponse<RiwayatPenanganan[]>> => {
   try {
     const [rows] = await getMySQLPool().execute<RowDataPacket[]>(
       `SELECT kj.idKunjungan, kj.kodeKunjungan, kj.tglKunjungan, kj.jamKunjungan, kj.status,
               po.namaPoli, ${LAYANAN_KUNJUNGAN_SQL} AS namaLayanan,
-              d.namaLengkap AS namaDokter, pr.namaLengkap AS namaPerawat, rm.diagnosa
+              d.namaLengkap AS namaDokter, pr.namaLengkap AS namaPerawat, rm.diagnosa,
+              rm.tekananDarah, rm.suhu, rm.nadi, rm.lajuNapas, rm.keluhan,
+              rm.resepObat, rm.catatanDokter
          FROM kunjungan kj
          JOIN poli po ON po.idPoli = kj.idPoli
          LEFT JOIN rekam_medis rm ON rm.idKunjungan = kj.idKunjungan
          LEFT JOIN karyawan d ON d.idKaryawan = COALESCE(rm.idDokter, kj.idDokter)
          LEFT JOIN karyawan pr ON pr.idKaryawan = COALESCE(rm.idPerawat, kj.idPerawat)
-        WHERE kj.idPasien = ?
+        WHERE kj.idPasien = ? ${idDokter == null ? "" : "AND kj.idDokter = ?"}
         ORDER BY kj.tglKunjungan DESC, kj.jamKunjungan DESC`,
-      [idPasien],
+      idDokter == null ? [idPasien] : [idPasien, idDokter],
     );
     return {
       success: true,
@@ -426,6 +676,13 @@ export const getRiwayatPasienService = async (
         namaPerawat: r.namaPerawat ?? null,
         status: r.status as StatusKunjungan,
         diagnosa: denganDiagnosa ? (r.diagnosa ?? null) : null,
+        tekananDarah: r.tekananDarah ?? null,
+        suhu: r.suhu == null ? null : Number(r.suhu),
+        nadi: r.nadi == null ? null : Number(r.nadi),
+        lajuNapas: r.lajuNapas == null ? null : Number(r.lajuNapas),
+        keluhan: r.keluhan ?? null,
+        resepObat: tampilkanResep(r.resepObat),
+        catatanDokter: r.catatanDokter ?? null,
       })),
     };
   } catch (err) {
@@ -556,6 +813,8 @@ export interface PemeriksaanTersimpan {
   nilai: Record<string, string | number | null>;
   layanan: number[];
   terkunci: boolean;
+  rincianBiaya: RincianBiayaDiagnosa | null;
+  resepLama: string | null;
 }
 
 export const getPemeriksaanService = async (
@@ -566,7 +825,8 @@ export const getPemeriksaanService = async (
     const [[rm], [items], [klaim]] = await Promise.all([
       pool.execute<RowDataPacket[]>(
         `SELECT rm.idPerawat, pr.namaLengkap AS namaPerawat, rm.tekananDarah, rm.suhu, rm.nadi,
-                rm.lajuNapas, rm.beratBadan, rm.tinggiBadan, rm.keluhan, rm.diagnosa, rm.catatanDokter
+                rm.lajuNapas, rm.beratBadan, rm.tinggiBadan, rm.keluhan, rm.diagnosa, rm.catatanDokter,
+                rm.resepObat
            FROM rekam_medis rm LEFT JOIN karyawan pr ON pr.idKaryawan = rm.idPerawat
           WHERE rm.idKunjungan = ? LIMIT 1`,
         [idKunjungan],
@@ -584,6 +844,7 @@ export const getPemeriksaanService = async (
         [idKunjungan],
       ),
     ]);
+    const rincianBiaya = parseRincianBiaya(rm[0]?.resepObat);
     return {
       success: true,
       data: {
@@ -593,6 +854,12 @@ export const getPemeriksaanService = async (
         nilai: rm[0] ? { ...rm[0] } : {},
         layanan: items.map((i) => i.idLayanan),
         terkunci: Number(klaim[0].jumlah) > 0,
+        rincianBiaya,
+        resepLama: rincianBiaya
+          ? rincianBiaya.resepLama ?? null
+          : typeof rm[0]?.resepObat === "string"
+            ? rm[0].resepObat
+            : null,
       },
     };
   } catch (err) {
@@ -603,7 +870,7 @@ export const getPemeriksaanService = async (
 /** Kunci kunjungan, pastikan belum dibatalkan & belum ada jasa yang diklaim */
 async function kunciKunjungan(conn: PoolConnection, idKunjungan: number) {
   const [kj] = await conn.execute<RowDataPacket[]>(
-    "SELECT idDokter, idPerawat, status, idPoli FROM kunjungan WHERE idKunjungan = ? FOR UPDATE",
+    "SELECT idDokter, idPerawat, status, idPoli, tglKunjungan FROM kunjungan WHERE idKunjungan = ? FOR UPDATE",
     [idKunjungan],
   );
   if (!kj[0]) throw new RekapError("Kunjungan tidak ditemukan.");
@@ -621,7 +888,13 @@ async function kunciKunjungan(conn: PoolConnection, idKunjungan: number) {
   if (Number(klaim[0].jumlah) > 0) {
     throw new RekapError("Jasa kunjungan ini sudah diklaim sehingga datanya tidak dapat diubah.");
   }
-  return kj[0] as { idDokter: number; idPerawat: number | null; status: string; idPoli: number };
+  return kj[0] as {
+    idDokter: number;
+    idPerawat: number | null;
+    status: string;
+    idPoli: number;
+    tglKunjungan: string;
+  };
 }
 
 /**
@@ -681,12 +954,41 @@ export const simpanDiagnosaService = async (
         throw new RekapError("Hanya dokter penanggung jawab yang dapat mengisi diagnosa.");
       }
       const [rm] = await conn.execute<RowDataPacket[]>(
-        "SELECT idRekamMedis FROM rekam_medis WHERE idKunjungan = ? FOR UPDATE",
+        "SELECT idRekamMedis, resepObat FROM rekam_medis WHERE idKunjungan = ? FOR UPDATE",
         [idKunjungan],
       );
       if (!rm[0]) {
         throw new RekapError("Tab Pemeriksaan (tanda vital & keluhan) belum diisi.");
       }
+
+      const [layananPemeriksaan] = await conn.execute<RowDataPacket[]>(
+        SQL_LAYANAN_PEMERIKSAAN,
+        [kj.idPoli],
+      );
+      if (!layananPemeriksaan[0]) {
+        throw new RekapError("Tarif pemeriksaan aktif untuk poli kunjungan belum tersedia.");
+      }
+      const tanggal = tgl(kj.tglKunjungan) ?? "";
+      const biayaPemeriksaan = hitungBiayaPemeriksaan(layananPemeriksaan[0], tanggal);
+      const obat = hitungItemDiagnosa(d.obat);
+      const suntik = hitungItemDiagnosa(d.suntik);
+      const totalObat = bulatkanUang(obat.reduce((total, item) => total + item.subtotal, 0));
+      const totalSuntik = bulatkanUang(suntik.reduce((total, item) => total + item.subtotal, 0));
+      const rincianSebelumnya = parseRincianBiaya(rm[0].resepObat);
+      const rincianBiaya: RincianBiayaDiagnosa = {
+        versi: 1,
+        biayaPemeriksaan,
+        obat,
+        suntik,
+        totalObat,
+        totalSuntik,
+        total: bulatkanUang(biayaPemeriksaan.biaya + totalObat + totalSuntik),
+        resepLama: rincianSebelumnya
+          ? rincianSebelumnya.resepLama ?? null
+          : typeof rm[0].resepObat === "string"
+            ? rm[0].resepObat
+            : null,
+      };
 
       // Semua layanan harus aktif & dari poli kunjungan
       const [valid] = await conn.query<RowDataPacket[]>(
@@ -705,9 +1007,14 @@ export const simpanDiagnosaService = async (
         d.layanan.map((idLayanan) => [idKunjungan, idLayanan]),
       ]);
       await conn.execute(
-        `UPDATE rekam_medis SET diagnosa = ?, catatanDokter = ?
+        `UPDATE rekam_medis SET diagnosa = ?, catatanDokter = ?, resepObat = ?
           WHERE idRekamMedis = ?`,
-        [d.diagnosa, d.catatanDokter, rm[0].idRekamMedis],
+        [
+          d.diagnosa,
+          d.catatanDokter,
+          `${RESEP_BIAYA_PREFIX}${JSON.stringify(rincianBiaya)}`,
+          rm[0].idRekamMedis,
+        ],
       );
       // kunjungan.idLayanan = tindakan pertama (dipakai Laporan Layanan)
       await conn.execute(

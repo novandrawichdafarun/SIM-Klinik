@@ -81,6 +81,17 @@ export async function requireSuperAdminPage(): Promise<CurrentUser> {
   return user;
 }
 
+/** Untuk halaman (server component): arahkan ke login / 403 bila izin fitur tidak tersedia. */
+export async function requirePermissionPage(
+  kodeFitur: KodeFitur,
+  aksi: AksiHakAkses,
+): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/");
+  if (!(await hasPermission(user, kodeFitur, aksi))) redirect("/errors/403");
+  return user;
+}
+
 /** Cek izin per fitur dari tabel hak_akses. Super Admin selalu boleh. */
 export async function hasPermission(
   user: CurrentUser,
