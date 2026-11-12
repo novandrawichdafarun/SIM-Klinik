@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { requireSuperAdminPage } from "@/libs/authz";
+import { requirePermissionPage } from "@/libs/authz";
 import { getPoliListService } from "@/services/karyawan.service";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -31,7 +31,7 @@ export default function Page() {
 }
 
 async function TambahLayananForm() {
-  await requireSuperAdminPage();
+  await requirePermissionPage("katalog_layanan", "tambah");
   const result = await getPoliListService();
 
   return result.success ? (

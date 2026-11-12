@@ -74,7 +74,7 @@ const navGroups: NavGroup[] = [
         name: "Katalog Layanan",
         href: "/katalog-layanan",
         icon: ClipboardList,
-        akses: "superAdmin",
+        akses: ["katalog_layanan"],
       },
       {
         name: "Laporan Layanan",

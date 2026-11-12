@@ -87,6 +87,13 @@ export interface RiwayatPenanganan {
   namaPerawat: string | null;
   status: StatusKunjungan;
   diagnosa: string | null; // null bila pengguna bukan dokter
+  tekananDarah: string | null;
+  suhu: number | null;
+  nadi: number | null;
+  lajuNapas: number | null;
+  keluhan: string | null;
+  resepObat: string | null;
+  catatanDokter: string | null;
 }
 
 export interface PetugasOption {
@@ -107,6 +114,7 @@ export interface AksesRekap {
   bisaHapusPasien: boolean;
   bisaLihatSemuaPasien: boolean;
   bisaLihatDiagnosa: boolean;
+  hanyaDokter: boolean;
   /** Tab "Kunjungan Hari Ini" (tugas admin/perawat); dokter hanya melihat "Pasien Saya" */
   bisaLihatKunjungan: boolean;
 }
@@ -129,7 +137,7 @@ export interface TindakanOption {
 export interface PemeriksaanData {
   kunjungan: KunjunganItem;
   /** Peran pengguna di kunjungan ini */
-  peran: "dokter" | "perawat";
+  peran: "dokter" | "perawat" | "readonly";
   /** Tab Pemeriksaan boleh diubah (perawat, atau dokter penanggung jawab) */
   bisaUbahPemeriksaan: boolean;
   /** Tab Diagnosa terbuka (hanya dokter penanggung jawab) */
@@ -138,6 +146,8 @@ export interface PemeriksaanData {
   terkunci: boolean;
   namaPerawat: string | null;
   layananOptions: TindakanOption[];
+  biayaPemeriksaan: BiayaPemeriksaan | null;
+  errorBiayaPemeriksaan: string | null;
   pemeriksaan: {
     tekananDarah: string;
     suhu: string;
@@ -151,5 +161,38 @@ export interface PemeriksaanData {
     diagnosa: string;
     catatanDokter: string;
     layanan: number[];
+    obat: ItemDiagnosa[];
+    suntik: ItemDiagnosa[];
+    resepLama: string | null;
   };
+}
+
+export interface ItemDiagnosa {
+  nama: string;
+  jumlah: number;
+  satuan: string;
+  hargaSatuan: number;
+}
+
+export interface ItemDiagnosaTersimpan extends ItemDiagnosa {
+  subtotal: number;
+}
+
+export interface BiayaPemeriksaan {
+  idLayanan: number;
+  namaLayanan: string;
+  tarif: number;
+  diskonPersen: number;
+  biaya: number;
+}
+
+export interface RincianBiayaDiagnosa {
+  versi: 1;
+  biayaPemeriksaan: BiayaPemeriksaan;
+  obat: ItemDiagnosaTersimpan[];
+  suntik: ItemDiagnosaTersimpan[];
+  totalObat: number;
+  totalSuntik: number;
+  total: number;
+  resepLama?: string | null;
 }

@@ -14,11 +14,13 @@ import {
   createKunjunganService,
   createPasienService,
   getAntreanDiagnosaService,
+  getBiayaPemeriksaanService,
   deletePasienService,
   getKunjunganByIdService,
   getKunjunganByTanggalService,
   getOpsiKunjunganService,
   getPasienByIdService,
+  getPasienByIdUntukDokterService,
   getPasienListService,
   getPasienOptionsService,
   getPemeriksaanService,
@@ -49,6 +51,7 @@ interface Konteks {
   karyawan: KaryawanJasa | null;
   akses: AksesRekap;
   bisaLihatRekap: boolean;
+  hanyaDokter: boolean;
   /** Dokter yang boleh mengisi diagnosa (kunjungan yang ia tangani) */
   bisaDiagnosa: boolean;
   /** Perawat yang boleh mengisi tab Pemeriksaan (semua kunjungan) */
@@ -78,13 +81,14 @@ async function konteks(): Promise<Konteks> {
   return {
     user,
     karyawan,
+    hanyaDokter: dokterSaja,
     akses: {
       bisaTambahPasien: input(inputTambah),
       bisaUbahPasien: input(inputUbah),
       bisaHapusPasien: input(inputHapus),
       bisaLihatSemuaPasien: input(inputLihat),
-      // Diagnosa hanya untuk dokter (termasuk Pimpinan Klinik yang juga dokter)
-      bisaLihatDiagnosa: karyawan?.jabatan === "dokter",
+      bisaLihatDiagnosa: rekapLihat || inputLihat,
+      hanyaDokter: dokterSaja,
       bisaLihatKunjungan: !dokterSaja && (rekapLihat || inputLihat),
     },
     bisaLihatRekap: rekapLihat || inputLihat,
@@ -162,7 +166,9 @@ export async function getDaftarPasienAction(params: {
       getPasienListService({
         q,
         // "Pasien Saya" = pernah ditangani karyawan ini sebagai dokter/perawat
-        idKaryawan: params.semua ? null : (k.karyawan?.idKaryawan ?? -1),
+        idKaryawan: params.semua || k.hanyaDokter ? null : (k.karyawan?.idKaryawan ?? -1),
+        idDokter:
+          !params.semua && k.hanyaDokter ? (k.karyawan?.idKaryawan ?? -1) : null,
         denganDiagnosa: k.akses.bisaLihatDiagnosa,
       }),
       denganAntrean ? getAntreanDiagnosaService(k.karyawan!.idKaryawan, q) : null,
@@ -186,13 +192,22 @@ export async function getPasienDetailAction(
   try {
     const k = await konteks();
     if (!k.bisaLihatRekap) return { success: false, error: TOLAK };
-    const [pasien, riwayat] = await Promise.all([
-      getPasienByIdService(idPasien),
-      getRiwayatPasienService(idPasien, k.akses.bisaLihatDiagnosa),
-    ]);
+    if (!Number.isSafeInteger(idPasien) || idPasien <= 0) {
+      return { success: false, error: "Pasien tidak ditemukan." };
+    }
+    const idDokter = k.hanyaDokter ? (k.karyawan?.idKaryawan ?? -1) : null;
+    const pasien =
+      idDokter === null
+        ? await getPasienByIdService(idPasien)
+        : await getPasienByIdUntukDokterService(idPasien, idDokter);
     if (!pasien.success) return pasien;
-    if (!riwayat.success) return riwayat;
     if (!pasien.data) return { success: false, error: "Pasien tidak ditemukan." };
+    const riwayat = await getRiwayatPasienService(
+      idPasien,
+      k.akses.bisaLihatDiagnosa,
+      idDokter,
+    );
+    if (!riwayat.success) return riwayat;
     return {
       success: true,
       data: { pasien: pasien.data, riwayat: riwayat.data ?? [], akses: k.akses },
@@ -340,13 +355,17 @@ async function aksesPemeriksaan(idKunjungan: number) {
   const dokterPj = k.bisaDiagnosa && !!k.karyawan && kj.data.idDokter === k.karyawan.idKaryawan;
   const perawatTugas =
     k.bisaPeriksaPerawat && !!k.karyawan && kj.data.idPerawat === k.karyawan.idKaryawan;
-  if (!dokterPj && !perawatTugas) {
+  const readonlyAdmin =
+    k.bisaLihatRekap &&
+    k.akses.bisaLihatDiagnosa &&
+    (k.user.role === "admin" || k.user.isSuperAdmin);
+  if (!dokterPj && !perawatTugas && !readonlyAdmin) {
     return { error: "Anda tidak memiliki akses untuk mengisi pemeriksaan kunjungan ini." } as const;
   }
   return {
     kunjungan: kj.data,
-    karyawan: k.karyawan!,
-    peran: dokterPj ? ("dokter" as const) : ("perawat" as const),
+    karyawan: k.karyawan,
+    peran: dokterPj ? ("dokter" as const) : perawatTugas ? ("perawat" as const) : ("readonly" as const),
   } as const;
 }
 
@@ -363,20 +382,48 @@ export async function getPemeriksaanAction(
     ]);
     if (!pem.success) return pem;
     if (!opsi.success) return opsi;
+    const biaya = await getBiayaPemeriksaanService(a.kunjungan.idPoli, a.kunjungan.tanggal);
+    if (!biaya.success) return biaya;
+    const biayaPemeriksaan = biaya.data ?? null;
+    const errorBiayaPemeriksaan = biayaPemeriksaan
+      ? null
+      : "Tarif pemeriksaan aktif untuk poli kunjungan belum tersedia. Hubungi administrator klinik.";
     const t = pem.data!;
     const s = (v: unknown) => (v === null || v === undefined ? "" : String(v).replace(/\.0$/, ""));
     const n = t.nilai;
+    const diagnosa = {
+      diagnosa: s(n.diagnosa),
+      catatanDokter: s(n.catatanDokter),
+      layanan: t.layanan,
+      obat:
+        t.rincianBiaya?.obat.map(({ nama, jumlah, satuan, hargaSatuan }) => ({
+          nama,
+          jumlah,
+          satuan,
+          hargaSatuan,
+        })) ?? [],
+      suntik:
+        t.rincianBiaya?.suntik.map(({ nama, jumlah, satuan, hargaSatuan }) => ({
+          nama,
+          jumlah,
+          satuan,
+          hargaSatuan,
+        })) ?? [],
+      resepLama: t.resepLama,
+    };
 
     return {
       success: true,
       data: {
-        kunjungan: { ...a.kunjungan, bisaPeriksa: true },
+        kunjungan: { ...a.kunjungan, bisaPeriksa: a.peran !== "readonly" },
         peran: a.peran,
         bisaUbahPemeriksaan: !t.terkunci,
         bisaDiagnosa: a.peran === "dokter" && !t.terkunci,
         terkunci: t.terkunci,
         namaPerawat: t.namaPerawat ?? a.kunjungan.namaPerawat,
         layananOptions: opsi.data ?? [],
+        biayaPemeriksaan,
+        errorBiayaPemeriksaan,
         pemeriksaan: {
           tekananDarah: s(n.tekananDarah),
           suhu: s(n.suhu).replace(".", ","),
@@ -386,11 +433,8 @@ export async function getPemeriksaanAction(
           tinggiBadan: s(n.tinggiBadan).replace(".", ","),
           keluhan: s(n.keluhan),
         },
-        // Diagnosa & layanan hanya dikirim ke dokter
-        diagnosa:
-          a.peran === "dokter"
-            ? { diagnosa: s(n.diagnosa), catatanDokter: s(n.catatanDokter), layanan: t.layanan }
-            : { diagnosa: "", catatanDokter: "", layanan: [] },
+        // Perawat yang ditugaskan dapat melihat hasil; hanya dokter pemilik yang dapat menyimpan.
+        diagnosa,
       },
     };
   } catch (error) {
@@ -407,6 +451,9 @@ export async function simpanPemeriksaanAction(
   try {
     const a = await aksesPemeriksaan(idKunjungan);
     if ("error" in a) return { success: false, error: a.error ?? "Akses ditolak." };
+    if (a.peran === "readonly") {
+      return { success: false, error: "Akses hanya untuk melihat hasil pemeriksaan." };
+    }
     const { data, error } = validateFormData(fd, pemeriksaanSchema);
     if (error || !data) return { success: false, error: error || "Validasi gagal." };
     // Perawat pemeriksa (penerima jasa perawat) = perawat yang dipilih saat pendaftaran
@@ -428,6 +475,9 @@ export async function simpanDiagnosaAction(
     if ("error" in a) return { success: false, error: a.error ?? "Akses ditolak." };
     if (a.peran !== "dokter") {
       return { success: false, error: "Diagnosa hanya dapat diisi dokter penanggung jawab." };
+    }
+    if (!a.karyawan) {
+      return { success: false, error: "Data karyawan dokter tidak ditemukan." };
     }
     const { data, error } = validateFormData(fd, diagnosaSchema);
     if (error || !data) return { success: false, error: error || "Validasi gagal." };
