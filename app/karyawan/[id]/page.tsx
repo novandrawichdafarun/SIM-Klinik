@@ -1,57 +1,10 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
-import { getKaryawanDetailAction } from "@/actions/karyawan";
-import KaryawanDetailView from "@/components/karyawan/KaryawanDetailView";
 import AppShell from "@/components/layouts/AppShell";
-import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
+import DetailKaryawanContent from "@/components/karyawan/DetailKaryawanContent";
 
 export const metadata = { title: "Detail Karyawan - ERM Klinik Pratama" };
 
 type Props = PageProps<"/karyawan/[id]">;
-
-async function DetailContent({
-  params,
-  searchParams,
-}: Pick<Props, "params" | "searchParams">) {
-  const [{ id }, sp] = await Promise.all([params, searchParams]);
-  const idKaryawan = Number(id);
-  if (!Number.isInteger(idKaryawan) || idKaryawan <= 0) notFound();
-
-  const periode =
-    typeof sp.periode === "string" ? Number(sp.periode) : undefined;
-  const result = await getKaryawanDetailAction(idKaryawan, periode);
-
-  if (!result.success || !result.data) {
-    return (
-      <>
-        <Breadcrumb
-          items={[
-            { label: "Beranda", href: "/dashboard" },
-            { label: "Kelola Karyawan", href: "/karyawan" },
-            { label: "Detail" },
-          ]}
-        />
-        <ErrorBox
-          message={result.success ? "Data tidak tersedia." : result.error}
-        />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Breadcrumb
-        items={[
-          { label: "Beranda", href: "/dashboard" },
-          { label: "Kelola Karyawan", href: "/karyawan" },
-          { label: result.data.karyawan.namaLengkap },
-        ]}
-      />
-      <KaryawanDetailView data={result.data} />
-    </>
-  );
-}
 
 export default function KaryawanDetailPage({ params, searchParams }: Props) {
   return (
@@ -65,7 +18,7 @@ export default function KaryawanDetailPage({ params, searchParams }: Props) {
             </div>
           }
         >
-          <DetailContent params={params} searchParams={searchParams} />
+          <DetailKaryawanContent params={params} searchParams={searchParams} />
         </Suspense>
       </main>
     </AppShell>

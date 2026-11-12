@@ -1,23 +1,9 @@
 import { Suspense } from "react";
-import { getKaryawanFormDataAction } from "@/actions/karyawan";
-import KaryawanForm from "@/components/karyawan/KaryawanForm";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
+import TambahKaryawanForm from "@/components/karyawan/TambahKaryawanForm";
 
 export const metadata = { title: "Tambah Karyawan - ERM Klinik Pratama" };
-
-async function TambahKaryawanForm() {
-  const result = await getKaryawanFormDataAction();
-  if (!result.success || !result.data) {
-    return (
-      <ErrorBox
-        message={result.success ? "Data tidak tersedia." : result.error}
-      />
-    );
-  }
-  return <KaryawanForm poli={result.data.poli} initialValues={null} />;
-}
 
 export default function TambahKaryawanPage() {
   return (

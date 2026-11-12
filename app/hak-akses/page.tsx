@@ -1,28 +1,9 @@
 import { Suspense } from "react";
-import { getHakAksesPageAction } from "@/actions/hak-akses";
-import HakAksesView from "@/components/hak-akses/HakAksesView";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
+import HakAksesContent from "@/components/hak-akses/HakAksesContent";
 
 export const metadata = { title: "Hak Akses Karyawan - ERM Klinik Pratama" };
-
-async function HakAksesContent({
-  searchParams,
-}: Pick<PageProps<"/hak-akses">, "searchParams">) {
-  const sp = await searchParams;
-  const user = typeof sp.user === "string" ? sp.user : undefined;
-
-  const result = await getHakAksesPageAction(user);
-  if (!result.success || !result.data) {
-    return (
-      <ErrorBox
-        message={result.success ? "Data tidak tersedia." : result.error}
-      />
-    );
-  }
-  return <HakAksesView {...result.data} />;
-}
 
 export default function HakAksesPage({
   searchParams,

@@ -1,38 +1,9 @@
 import { Suspense } from "react";
-import { getAkunListAction } from "@/actions/akun";
-import AkunTabel from "@/components/akun/AkunTabel";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
-import type { StatusAkunFilter } from "@/types/akun";
+import AkunList from "@/components/akun/AkunList";
 
 export const metadata = { title: "Kelola Akun - ERM Klinik Pratama" };
-
-async function AkunList({
-  searchParams,
-}: Pick<PageProps<"/akun">, "searchParams">) {
-  const sp = await searchParams;
-  const q = typeof sp.q === "string" ? sp.q : "";
-  const status: StatusAkunFilter =
-    sp.status === "aktif" || sp.status === "nonaktif" ? sp.status : "semua";
-
-  const result = await getAkunListAction({ q, status });
-  if (!result.success || !result.data) {
-    return (
-      <ErrorBox
-        message={result.success ? "Data akun tidak tersedia." : result.error}
-      />
-    );
-  }
-  return (
-    <AkunTabel
-      items={result.data.items}
-      currentUserId={result.data.currentUserId}
-      q={q}
-      status={status}
-    />
-  );
-}
 
 export default function AkunPage({ searchParams }: PageProps<"/akun">) {
   return (

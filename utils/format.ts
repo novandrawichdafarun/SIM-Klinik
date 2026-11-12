@@ -1,4 +1,5 @@
 import type { UserRole } from "@/types/auth";
+import { BULAN_PENDEK, HARI } from "./date";
 
 export const ROLE_LABEL: Record<UserRole, string> = {
   super_admin: "Super Admin",
@@ -26,17 +27,6 @@ export function getInitials(name: string | null | undefined): string {
       .map((word) => word[0].toUpperCase())
       .join("") || "?"
   );
-}
-
-const BULAN_PENDEK = [
-  "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
-  "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
-];
-
-/** "2026-10" → "Okt" */
-export function labelBulan(yyyyMm: string): string {
-  const month = Number(yyyyMm.slice(5, 7));
-  return BULAN_PENDEK[month - 1] ?? yyyyMm;
 }
 
 /**
@@ -85,10 +75,10 @@ export function generateNoRM(idPasien: number): string {
 
 /** "3174052309920003" → "3174••••••••0003" */
 export function maskNik(nik: string): string {
-  return nik.length === 16 ? `${nik.slice(0, 4)}${"•".repeat(8)}${nik.slice(-4)}` : nik;
+  return nik.length === 16
+    ? `${nik.slice(0, 4)}${"•".repeat(8)}${nik.slice(-4)}`
+    : nik;
 }
-
-const HARI = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
 
 /** "2026-11-02" → "Senin, 02 Nov 2026" */
 export function formatHariTanggal(yyyyMmDd: string): string {
@@ -98,28 +88,37 @@ export function formatHariTanggal(yyyyMmDd: string): string {
 }
 
 /** Umur dalam tahun dari tanggal lahir YYYY-MM-DD */
-export function hitungUsia(tanggalLahir: string | null, today = new Date()): number | null {
+export function hitungUsia(
+  tanggalLahir: string | null,
+  today = new Date(),
+): number | null {
   if (!tanggalLahir) return null;
   const [y, m, d] = tanggalLahir.split("-").map(Number);
   let usia = today.getFullYear() - y;
-  if (today.getMonth() + 1 < m || (today.getMonth() + 1 === m && today.getDate() < d)) usia--;
+  if (
+    today.getMonth() + 1 < m ||
+    (today.getMonth() + 1 === m && today.getDate() < d)
+  )
+    usia--;
   return usia;
-}
-
-/** Tanggal hari ini (zona waktu server) dalam format YYYY-MM-DD */
-export function hariIni(now = new Date()): string {
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 export const JABATAN_PIMPINAN = "Pimpinan Klinik";
 
 /** Jabatan Pimpinan Klinik selalu memakai akun Super Admin */
-export function isJabatanPimpinan(jenisKaryawan: string | null | undefined): boolean {
-  return (jenisKaryawan ?? "").trim().toLowerCase() === JABATAN_PIMPINAN.toLowerCase();
+export function isJabatanPimpinan(
+  jenisKaryawan: string | null | undefined,
+): boolean {
+  return (
+    (jenisKaryawan ?? "").trim().toLowerCase() ===
+    JABATAN_PIMPINAN.toLowerCase()
+  );
 }
 
 /** Jabatan berawalan "Dokter" / "dr." / "drg." dianggap dokter (punya rating & rekam medis) */
-export function isJabatanDokter(jenisKaryawan: string | null | undefined): boolean {
+export function isJabatanDokter(
+  jenisKaryawan: string | null | undefined,
+): boolean {
   return /^(dokter|dr\.?|drg\.?)\b/i.test((jenisKaryawan ?? "").trim());
 }
 
@@ -127,17 +126,6 @@ export function isJabatanDokter(jenisKaryawan: string | null | undefined): boole
 export function formatRupiah(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `Rp ${Math.round(value).toLocaleString("id-ID")}`;
-}
-
-const BULAN_PANJANG = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-
-/** "2026-10" → "Oktober 2026" */
-export function labelBulanTahun(yyyyMm: string): string {
-  const [y, m] = yyyyMm.split("-");
-  return `${BULAN_PANJANG[Number(m) - 1] ?? m} ${y}`;
 }
 
 /**
@@ -148,7 +136,22 @@ export function labelBulanTahun(yyyyMm: string): string {
 export function kategoriJabatanJasa(
   jenisKaryawan: string | null | undefined,
 ): "dokter" | "perawat" | null {
-  if (isJabatanDokter(jenisKaryawan) || isJabatanPimpinan(jenisKaryawan)) return "dokter";
+  if (isJabatanDokter(jenisKaryawan) || isJabatanPimpinan(jenisKaryawan))
+    return "dokter";
   if (/perawat|bidan/i.test(jenisKaryawan ?? "")) return "perawat";
   return null;
+}
+
+export function formatNomorHp(value: string | null) {
+  if (!value) return "-";
+  const angka = value.replace(/\D/g, "");
+  const lokal = angka.startsWith("62")
+    ? angka.slice(2)
+    : angka.startsWith("0")
+      ? angka.slice(1)
+      : angka;
+  const bagian = /^(\d{3})(\d{3,4})(\d*)$/.exec(lokal);
+  return bagian
+    ? `+62 ${bagian[1]}-${bagian[2]}${bagian[3] ? `-${bagian[3]}` : ""}`
+    : `+62 ${lokal}`;
 }

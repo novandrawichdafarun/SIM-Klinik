@@ -7,170 +7,18 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { ArrowLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { deletePasienAction } from "@/actions/rekap-pasien";
-import Avatar from "@/components/ui/Avatar";
-import type { AksesRekap, Pasien, RiwayatPenanganan } from "@/types/rekap-pasien";
-import { formatTanggal, hitungUsia } from "@/utils/format";
+import type {
+  AksesRekap,
+  Pasien,
+  RiwayatPenanganan,
+} from "@/types/rekap-pasien";
+import { formatNomorHp, formatTanggal, hitungUsia } from "@/utils/format";
 import { StatusKunjunganBadge } from "./KunjunganView";
-
-const BULAN = [
-  "Januari",
-  "Februari",
-  "Maret",
-  "April",
-  "Mei",
-  "Juni",
-  "Juli",
-  "Agustus",
-  "September",
-  "Oktober",
-  "November",
-  "Desember",
-];
-/** "1992-09-23" → "23 September 1992" */
-const tanggalPanjang = (v: string | null) => {
-  if (!v) return "-";
-  const [y, m, d] = v.split("-");
-  return `${Number(d)} ${BULAN[Number(m) - 1]} ${y}`;
-};
-
-function Info({
-  label,
-  value,
-  wide = false,
-}: {
-  label: string;
-  value: string | null;
-  wide?: boolean;
-}) {
-  return (
-    <div className={wide ? "sm:col-span-3" : undefined}>
-      <dt className="text-xs text-ink-3">{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium break-words">{value || "-"}</dd>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
-      <h2 className="mb-4 text-[15px] font-bold">{title}</h2>
-      <dl className="grid gap-x-6 gap-y-4 sm:grid-cols-3">{children}</dl>
-    </section>
-  );
-}
-
-function formatNomorHp(value: string | null) {
-  if (!value) return "-";
-  const angka = value.replace(/\D/g, "");
-  const lokal = angka.startsWith("62")
-    ? angka.slice(2)
-    : angka.startsWith("0")
-      ? angka.slice(1)
-      : angka;
-  const bagian = /^(\d{3})(\d{3,4})(\d*)$/.exec(lokal);
-  return bagian ? `+62 ${bagian[1]}-${bagian[2]}${bagian[3] ? `-${bagian[3]}` : ""}` : `+62 ${lokal}`;
-}
-
-function RingkasanIdentitas({
-  pasien,
-  usia,
-  kelamin,
-  isBpjs,
-  ringkasDokter = false,
-}: {
-  pasien: Pasien;
-  usia: number | null;
-  kelamin: string;
-  isBpjs: boolean;
-  ringkasDokter?: boolean;
-}) {
-  const nikValid = /^\d{16}$/.test(pasien.NIK);
-  const baris: [string, string][] = [
-    ["No. RM", pasien.NoRM],
-    ["NIK", pasien.NIK],
-    ...(!ringkasDokter && nikValid ? [["Validasi Dukcapil", "Terverifikasi"] as [string, string]] : []),
-    ...(!ringkasDokter ? [["Terdaftar sejak", formatTanggal(pasien.createdAt)] as [string, string]] : []),
-    ...(ringkasDokter ? [["No. BPJS", pasien.noBpjs ?? "-"] as [string, string]] : []),
-  ];
-
-  return (
-    <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
-      <div className="flex items-center gap-4">
-        <Avatar name={pasien.namaLengkap} size="lg" />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">
-            {kelamin}
-            {usia !== null && ` · ${usia} tahun`}
-          </p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <span className="rounded-full bg-avatar px-2 py-0.5 text-[11px] font-semibold text-avatar-ink">
-              {isBpjs ? "BPJS" : pasien.jenisPenjamin}
-            </span>
-            {pasien.golonganDarah && (
-              <span className="rounded-full bg-neutral-soft px-2 py-0.5 text-[11px] font-semibold text-ink-2">
-                Gol. darah {pasien.golonganDarah}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-      <dl className="mt-5 space-y-3 border-t border-line pt-4 text-sm">
-        {baris.map(([label, value]) => (
-          <div key={label} className="flex justify-between gap-4">
-            <dt className="text-ink-3">{label}</dt>
-            <dd
-              className={`text-right font-semibold tabular-nums ${
-                label === "Validasi Dukcapil" ? "rounded-full bg-accent-soft px-2 text-accent-ink" : ""
-              }`}
-            >
-              {value}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
-
-function DetailKunjungan({ kunjungan }: { kunjungan: RiwayatPenanganan }) {
-  const vital = [
-    ["Tekanan darah", kunjungan.tekananDarah ? `${kunjungan.tekananDarah} mmHg` : "-"],
-    ["Suhu", kunjungan.suhu === null ? "-" : `${kunjungan.suhu} C`],
-    ["Nadi", kunjungan.nadi === null ? "-" : `${kunjungan.nadi} x/menit`],
-    ["Laju napas", kunjungan.lajuNapas === null ? "-" : `${kunjungan.lajuNapas} x/menit`],
-  ];
-  const rincian = [
-    ["Keluhan", kunjungan.keluhan],
-    ["Diagnosa", kunjungan.diagnosa],
-    ["Resep", kunjungan.resepObat],
-    ["Catatan dokter", kunjungan.catatanDokter],
-  ] as const;
-
-  return (
-    <section className="rounded-xl border border-line bg-surface p-5 shadow-sm">
-      <h2 className="text-[15px] font-bold">
-        {formatTanggal(kunjungan.tanggal)} · {kunjungan.namaPoli}
-      </h2>
-      <p className="mt-1 text-xs text-ink-3">{kunjungan.kodeKunjungan}</p>
-      <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {vital.map(([label, value]) => (
-          <div key={label} className="rounded-lg bg-surface-muted p-3">
-            <dt className="text-xs text-ink-3">{label}</dt>
-            <dd className="mt-1 text-sm font-semibold">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-        {rincian.map(([label, value]) => (
-          <div key={label}>
-            <dt className="text-xs text-ink-3">{label}</dt>
-            <dd className="mt-1 text-sm font-medium break-words whitespace-pre-wrap">{value || "-"}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  );
-}
+import DetailKunjungan from "./DetailKunjungan";
+import RingkasanIdentitasPasien from "./RingkasanIdentitasPasien";
+import Info from "../ui/Info";
+import Section from "../ui/Section";
+import { tanggalPanjang } from "@/utils/date";
 
 export default function PasienDetailView({
   pasien: p,
@@ -183,20 +31,26 @@ export default function PasienDetailView({
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"identitas" | "riwayat">("identitas");
-  const [selectedId, setSelectedId] = useState<number | null>(() => riwayat[0]?.idKunjungan ?? null);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    () => riwayat[0]?.idKunjungan ?? null,
+  );
   const [isPending, startTransition] = useTransition();
   const usia = hitungUsia(p.tanggalLahir);
   const kelamin = p.jenisKelamin === "P" ? "Perempuan" : "Laki-laki";
   const isBpjs = p.jenisPenjamin === "BPJS Kesehatan (JKN)";
   const hanyaDokter = akses.hanyaDokter;
   const bisaKelola = akses.bisaUbahPasien || akses.bisaHapusPasien;
-  const selected = riwayat.find((item) => item.idKunjungan === selectedId) ?? null;
-  const kembaliHref = hanyaDokter ? "/rekap-pasien?tab=saya" : "/rekap-pasien?tab=semua";
+  const selected =
+    riwayat.find((item) => item.idKunjungan === selectedId) ?? null;
+  const kembaliHref = hanyaDokter
+    ? "/rekap-pasien?tab=saya"
+    : "/rekap-pasien?tab=semua";
 
   async function hapus() {
     const setuju = await konfirmasi({
       judul: `Hapus pasien ${p.namaLengkap}?`,
-      pesan: "Pasien yang memiliki riwayat kunjungan tidak dapat dihapus. Penghapusan data pasien tanpa riwayat tidak dapat dibatalkan.",
+      pesan:
+        "Pasien yang memiliki riwayat kunjungan tidak dapat dihapus. Penghapusan data pasien tanpa riwayat tidak dapat dibatalkan.",
       teksYa: "Ya, hapus",
       tipe: "bahaya",
     });
@@ -222,7 +76,9 @@ export default function PasienDetailView({
         >
           <ArrowLeft aria-hidden="true" size={17} />
         </Link>
-        <h1 className="text-[25px] font-bold tracking-tight md:text-[28px]">{p.namaLengkap}</h1>
+        <h1 className="text-[25px] font-bold tracking-tight md:text-[28px]">
+          {p.namaLengkap}
+        </h1>
         {!hanyaDokter && (
           <div className="ml-auto hidden gap-2 md:flex">
             {akses.bisaUbahPasien && (
@@ -251,7 +107,7 @@ export default function PasienDetailView({
 
       {hanyaDokter ? (
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(240px,280px)_1fr]">
-          <RingkasanIdentitas
+          <RingkasanIdentitasPasien
             pasien={p}
             usia={usia}
             kelamin={kelamin}
@@ -273,7 +129,9 @@ export default function PasienDetailView({
                           <th className="px-3">Layanan</th>
                           <th className="px-3">Dokter</th>
                           <th className="px-3">Diagnosa</th>
-                          <th className="pr-5"><span className="sr-only">Detail</span></th>
+                          <th className="pr-5">
+                            <span className="sr-only">Detail</span>
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -291,15 +149,23 @@ export default function PasienDetailView({
                               }
                             }}
                             className={`h-12 cursor-pointer border-t border-line hover:bg-surface-hover ${
-                              selectedId === item.idKunjungan ? "bg-accent-soft/50" : ""
+                              selectedId === item.idKunjungan
+                                ? "bg-accent-soft/50"
+                                : ""
                             }`}
                           >
-                            <td className="pl-5 whitespace-nowrap">{formatTanggal(item.tanggal)}</td>
+                            <td className="pl-5 whitespace-nowrap">
+                              {formatTanggal(item.tanggal)}
+                            </td>
                             <td className="px-3">{item.namaLayanan}</td>
                             <td className="px-3">{item.namaDokter ?? "-"}</td>
                             <td className="px-3">{item.diagnosa ?? "-"}</td>
                             <td className="pr-5 text-right">
-                              <ChevronRight aria-hidden="true" size={16} className="inline-block text-ink-3" />
+                              <ChevronRight
+                                aria-hidden="true"
+                                size={16}
+                                className="inline-block text-ink-3"
+                              />
                             </td>
                           </tr>
                         ))}
@@ -314,23 +180,35 @@ export default function PasienDetailView({
                         aria-pressed={selectedId === item.idKunjungan}
                         onClick={() => setSelectedId(item.idKunjungan)}
                         className={`flex w-full items-start gap-3 px-4 py-3 text-left ${
-                          selectedId === item.idKunjungan ? "bg-accent-soft/50" : "hover:bg-surface-hover"
+                          selectedId === item.idKunjungan
+                            ? "bg-accent-soft/50"
+                            : "hover:bg-surface-hover"
                         }`}
                       >
                         <span className="min-w-0 flex-1">
-                          <span className="block text-xs text-ink-3">{formatTanggal(item.tanggal)}</span>
-                          <span className="mt-0.5 block truncate text-sm font-semibold">{item.namaLayanan}</span>
+                          <span className="block text-xs text-ink-3">
+                            {formatTanggal(item.tanggal)}
+                          </span>
+                          <span className="mt-0.5 block truncate text-sm font-semibold">
+                            {item.namaLayanan}
+                          </span>
                           <span className="mt-1 block text-xs text-ink-2">
                             {item.namaDokter ?? "-"} · {item.diagnosa ?? "-"}
                           </span>
                         </span>
-                        <ChevronRight aria-hidden="true" size={16} className="mt-1 shrink-0 text-ink-3" />
+                        <ChevronRight
+                          aria-hidden="true"
+                          size={16}
+                          className="mt-1 shrink-0 text-ink-3"
+                        />
                       </button>
                     ))}
                   </div>
                 </>
               ) : (
-                <p className="px-5 pb-5 text-sm text-ink-3">Belum ada riwayat penanganan.</p>
+                <p className="px-5 pb-5 text-sm text-ink-3">
+                  Belum ada riwayat penanganan.
+                </p>
               )}
             </section>
             {selected && <DetailKunjungan kunjungan={selected} />}
@@ -357,14 +235,25 @@ export default function PasienDetailView({
             ))}
           </div>
           <div className="grid items-start gap-5 xl:grid-cols-[minmax(300px,340px)_1fr]">
-            <RingkasanIdentitas pasien={p} usia={usia} kelamin={kelamin} isBpjs={isBpjs} />
+            <RingkasanIdentitasPasien
+              pasien={p}
+              usia={usia}
+              kelamin={kelamin}
+              isBpjs={isBpjs}
+            />
             {tab === "identitas" ? (
               <div className="space-y-5">
                 <Section title="Data Demografi">
                   <Info label="Nama lengkap" value={p.namaLengkap} />
                   <Info label="Tempat lahir" value={p.tempatLahir} />
-                  <Info label="Tanggal lahir" value={tanggalPanjang(p.tanggalLahir)} />
-                  <Info label="Usia" value={usia !== null ? `${usia} tahun` : null} />
+                  <Info
+                    label="Tanggal lahir"
+                    value={tanggalPanjang(p.tanggalLahir)}
+                  />
+                  <Info
+                    label="Usia"
+                    value={usia !== null ? `${usia} tahun` : null}
+                  />
                   <Info label="Jenis kelamin" value={kelamin} />
                   <Info label="Golongan darah" value={p.golonganDarah} />
                   <Info label="Status pernikahan" value={p.statusPernikahan} />
@@ -376,7 +265,9 @@ export default function PasienDetailView({
                   <Info label="Email" value={p.email} />
                   <Info
                     label="Alamat domisili"
-                    value={p.alamatDomisili ?? (p.alamat ? "Sama dengan KTP" : null)}
+                    value={
+                      p.alamatDomisili ?? (p.alamat ? "Sama dengan KTP" : null)
+                    }
                   />
                   <Info label="Alamat lengkap (KTP)" value={p.alamat} wide />
                   <Info label="Kecamatan" value={p.kecamatan} />
@@ -409,14 +300,20 @@ export default function PasienDetailView({
                     </thead>
                     <tbody>
                       {riwayat.map((r) => (
-                        <tr key={r.idKunjungan} className="h-13 border-t border-line">
+                        <tr
+                          key={r.idKunjungan}
+                          className="h-13 border-t border-line"
+                        >
                           <td className="pl-5 whitespace-nowrap">
-                            {formatTanggal(r.tanggal)}, {r.jam.replace(":", ".")}
+                            {formatTanggal(r.tanggal)},{" "}
+                            {r.jam.replace(":", ".")}
                           </td>
                           <td className="px-3 text-ink-3">{r.kodeKunjungan}</td>
                           <td className="px-3">
                             {r.namaPoli}
-                            <span className="block text-xs text-ink-3">{r.namaLayanan}</span>
+                            <span className="block text-xs text-ink-3">
+                              {r.namaLayanan}
+                            </span>
                           </td>
                           <td className="px-3">{r.namaDokter ?? "-"}</td>
                           <td className="px-3">{r.namaPerawat ?? "-"}</td>
@@ -428,7 +325,10 @@ export default function PasienDetailView({
                       ))}
                       {riwayat.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="h-24 text-center text-sm text-ink-3">
+                          <td
+                            colSpan={7}
+                            className="h-24 text-center text-sm text-ink-3"
+                          >
                             Belum ada riwayat penanganan.
                           </td>
                         </tr>

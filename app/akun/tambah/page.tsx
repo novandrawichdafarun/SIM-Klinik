@@ -1,56 +1,9 @@
-import Link from "next/link";
 import { Suspense } from "react";
-import { getKaryawanTanpaAkunAction } from "@/actions/akun";
-import { getFiturListAction } from "@/actions/hak-akses";
-import AkunForm from "@/components/akun/AkunForm";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
+import TambahAkunForm from "@/components/akun/TambahAkunForm";
 
 export const metadata = { title: "Tambah Akun - ERM Klinik Pratama" };
-
-async function TambahAkunForm({
-  searchParams,
-}: Pick<PageProps<"/akun/tambah">, "searchParams">) {
-  const sp = await searchParams;
-  const defaultKaryawanId =
-    typeof sp.karyawan === "string" ? Number(sp.karyawan) : undefined;
-
-  const [result, fitur] = await Promise.all([
-    getKaryawanTanpaAkunAction(),
-    getFiturListAction(),
-  ]);
-  if (!result.success || !result.data) {
-    return (
-      <ErrorBox
-        message={result.success ? "Data tidak tersedia." : result.error}
-      />
-    );
-  }
-
-  if (result.data.length === 0) {
-    return (
-      <div className="rounded-xl border border-line bg-surface p-6 text-sm shadow-sm">
-        <p>Semua karyawan aktif sudah memiliki akun.</p>
-        <Link
-          href="/karyawan/tambah"
-          className="mt-3 inline-flex font-semibold text-accent-ink hover:underline"
-        >
-          Tambah karyawan baru terlebih dahulu →
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <AkunForm
-      mode="create"
-      karyawanOptions={result.data}
-      defaultKaryawanId={defaultKaryawanId}
-      fitur={fitur.success ? (fitur.data ?? []) : []}
-    />
-  );
-}
 
 export default function TambahAkunPage({
   searchParams,

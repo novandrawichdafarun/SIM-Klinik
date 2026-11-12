@@ -4,16 +4,22 @@ import { konfirmasi } from "@/components/feedback/konfirmasi";
 import { toast } from "@/components/feedback/toast";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { CalendarDays, ChevronDown, CircleCheck, Clock, Info, WalletCards } from "lucide-react";
-import { klaimJasaAction } from "@/actions/jasa-pelayanan";
-import type { JasaPelayananData, PerolehanJasa, StatusPerolehan } from "@/types/jasa";
 import {
-  formatDesimal,
-  formatRupiah,
-  formatTanggal,
-  labelBulan,
-  labelBulanTahun,
-} from "@/utils/format";
+  CalendarDays,
+  ChevronDown,
+  CircleCheck,
+  Clock,
+  Info,
+  WalletCards,
+} from "lucide-react";
+import { klaimJasaAction } from "@/actions/jasa-pelayanan";
+import type {
+  JasaPelayananData,
+  PerolehanJasa,
+  StatusPerolehan,
+} from "@/types/jasa";
+import { formatDesimal, formatRupiah, formatTanggal } from "@/utils/format";
+import { labelBulan, labelBulanTahun } from "@/utils/date";
 
 type Filter = "semua" | StatusPerolehan;
 
@@ -32,7 +38,10 @@ const STATUS_KLAIM_LABEL: Record<string, string> = {
 function StatusBadge({ item }: { item: PerolehanJasa }) {
   const map: Record<StatusPerolehan, { label: string; cls: string }> = {
     diklaim: { label: "Diklaim", cls: "bg-accent-soft text-accent-ink" },
-    belum_diklaim: { label: "Belum diklaim", cls: "bg-warning-soft text-warning-ink" },
+    belum_diklaim: {
+      label: "Belum diklaim",
+      cls: "bg-warning-soft text-warning-ink",
+    },
   };
   const { label, cls } = map[item.status];
   const title =
@@ -72,7 +81,9 @@ function StatCard({
   note: string;
 }) {
   return (
-    <div className={`rounded-xl border border-line bg-surface p-4 shadow-sm md:p-5 ${className}`}>
+    <div
+      className={`rounded-xl border border-line bg-surface p-4 shadow-sm md:p-5 ${className}`}
+    >
       <div className="flex items-center gap-3">
         <span
           className={`grid size-9 place-items-center rounded-lg ${
@@ -85,7 +96,9 @@ function StatCard({
         </span>
         <p className="text-xs text-ink-3">{label}</p>
       </div>
-      <p className="mt-3 text-xl font-bold tracking-tight tabular-nums md:text-2xl">{value}</p>
+      <p className="mt-3 text-xl font-bold tracking-tight tabular-nums md:text-2xl">
+        {value}
+      </p>
       <p className="mt-1 text-xs text-ink-3">{note}</p>
     </div>
   );
@@ -105,14 +118,18 @@ export default function JasaPelayananView({
   const [isPending, startTransition] = useTransition();
 
   const visible = useMemo(
-    () => (filter === "semua" ? items : items.filter((it) => it.status === filter)),
+    () =>
+      filter === "semua" ? items : items.filter((it) => it.status === filter),
     [items, filter],
   );
-  const claimableVisible = visible.filter((it) => it.status === "belum_diklaim");
+  const claimableVisible = visible.filter(
+    (it) => it.status === "belum_diklaim",
+  );
   const selectedItems = items.filter((it) => selected.has(it.idItem));
   const selectedTotal = selectedItems.reduce((s, it) => s + it.nominal, 0);
   const allVisibleSelected =
-    claimableVisible.length > 0 && claimableVisible.every((it) => selected.has(it.idItem));
+    claimableVisible.length > 0 &&
+    claimableVisible.every((it) => selected.has(it.idItem));
 
   const bulanPendek = `${labelBulan(bulan)} ${bulan.slice(0, 4)}`;
 
@@ -138,7 +155,9 @@ export default function JasaPelayananView({
 
   function changeBulan(value: string) {
     setSelected(new Set());
-    startTransition(() => router.replace(`${pathname}?bulan=${value}`, { scroll: false }));
+    startTransition(() =>
+      router.replace(`${pathname}?bulan=${value}`, { scroll: false }),
+    );
   }
 
   async function handleKlaim() {
@@ -150,7 +169,9 @@ export default function JasaPelayananView({
     });
     if (!setuju) return;
     startTransition(async () => {
-      const result = await klaimJasaAction(selectedItems.map((it) => it.idItem));
+      const result = await klaimJasaAction(
+        selectedItems.map((it) => it.idItem),
+      );
       if (!result.success) {
         toast.error(result.error);
         return;
@@ -188,17 +209,23 @@ export default function JasaPelayananView({
           </option>
         ))}
       </select>
-      <ChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute right-3" />
+      <ChevronDown
+        aria-hidden="true"
+        size={16}
+        className="pointer-events-none absolute right-3"
+      />
     </label>
   );
 
   return (
-    <div className={`space-y-5 pb-24 transition-opacity md:pb-0 ${isPending ? "opacity-70" : ""}`}>
+    <div
+      className={`space-y-5 pb-24 transition-opacity md:pb-0 ${isPending ? "opacity-70" : ""}`}
+    >
       {!jabatan && (
         <p className="flex items-start gap-2 rounded-xl bg-info-soft px-4 py-3 text-sm text-info-ink">
           <Info aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
-          Jabatan Anda tidak termasuk penerima jasa pelayanan (hanya dokter dan perawat), sehingga
-          tindakan tidak dihitung.
+          Jabatan Anda tidak termasuk penerima jasa pelayanan (hanya dokter dan
+          perawat), sehingga tindakan tidak dihitung.
         </p>
       )}
 
@@ -235,7 +262,11 @@ export default function JasaPelayananView({
         {/* Toolbar */}
         <div className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:p-5">
           <div className="hidden w-52 md:block">{bulanSelect}</div>
-          <div role="group" aria-label="Filter status" className="flex flex-wrap gap-2">
+          <div
+            role="group"
+            aria-label="Filter status"
+            className="flex flex-wrap gap-2"
+          >
             {FILTERS.map((f) => (
               <button
                 key={f.value}
@@ -254,11 +285,17 @@ export default function JasaPelayananView({
           </div>
           <div className="hidden items-center gap-4 md:ml-auto md:flex">
             <div className="text-right">
-              <p className="text-[11px] text-ink-3">{selectedItems.length} dipilih</p>
-              <p className="font-bold tabular-nums">{formatRupiah(selectedTotal)}</p>
+              <p className="text-[11px] text-ink-3">
+                {selectedItems.length} dipilih
+              </p>
+              <p className="font-bold tabular-nums">
+                {formatRupiah(selectedTotal)}
+              </p>
             </div>
             {klaimButton(
-              selectedItems.length > 0 ? `Klaim (${selectedItems.length} dipilih)` : "Klaim",
+              selectedItems.length > 0
+                ? `Klaim (${selectedItems.length} dipilih)`
+                : "Klaim",
             )}
           </div>
         </div>
@@ -305,18 +342,24 @@ export default function JasaPelayananView({
                         className="size-4.5 cursor-pointer accent-chart disabled:cursor-not-allowed disabled:opacity-40"
                       />
                     </td>
-                    <td className="px-3 text-ink-2">{formatTanggal(it.tanggal)}</td>
+                    <td className="px-3 text-ink-2">
+                      {formatTanggal(it.tanggal)}
+                    </td>
                     <td className="px-3">
                       <span className="font-semibold">{it.namaLayanan}</span>
                       <span className="block text-xs text-ink-3">
                         sebagai {it.peran === "dokter" ? "Dokter" : "Perawat"}
                       </span>
                     </td>
-                    <td className="px-3 tabular-nums">{formatRupiah(it.biaya)}</td>
+                    <td className="px-3 tabular-nums">
+                      {formatRupiah(it.biaya)}
+                    </td>
                     <td className="px-3 text-ink-3 tabular-nums">
                       {`${formatDesimal(it.persentase, Number.isInteger(it.persentase) ? 0 : 2)}%`}
                     </td>
-                    <td className="px-3 font-bold tabular-nums">{formatRupiah(it.nominal)}</td>
+                    <td className="px-3 font-bold tabular-nums">
+                      {formatRupiah(it.nominal)}
+                    </td>
                     <td className="pr-5">
                       <StatusBadge item={it} />
                     </td>
@@ -333,7 +376,10 @@ export default function JasaPelayananView({
             const checked = selected.has(it.idItem);
             const disabled = it.status !== "belum_diklaim";
             return (
-              <li key={it.idItem} className={checked ? "bg-accent-soft/50" : ""}>
+              <li
+                key={it.idItem}
+                className={checked ? "bg-accent-soft/50" : ""}
+              >
                 <label
                   className={`flex items-start gap-3 px-4 py-3 ${disabled ? "" : "cursor-pointer"}`}
                 >
@@ -348,11 +394,17 @@ export default function JasaPelayananView({
                     <span className="block text-[11px] text-ink-3">
                       {formatTanggal(it.tanggal)}
                     </span>
-                    <span className="block font-semibold">{it.namaLayanan}</span>
-                    <span className="block text-xs text-ink-3">{rumus(it)}</span>
+                    <span className="block font-semibold">
+                      {it.namaLayanan}
+                    </span>
+                    <span className="block text-xs text-ink-3">
+                      {rumus(it)}
+                    </span>
                   </span>
                   <span className="flex flex-col items-end gap-1">
-                    <span className="font-bold tabular-nums">{formatRupiah(it.nominal)}</span>
+                    <span className="font-bold tabular-nums">
+                      {formatRupiah(it.nominal)}
+                    </span>
                     <StatusBadge item={it} />
                   </span>
                 </label>
@@ -381,14 +433,19 @@ export default function JasaPelayananView({
 
       <p className="flex items-start gap-2 rounded-xl bg-info-soft px-4 py-3 text-sm text-info-ink">
         <Info aria-hidden="true" size={17} className="mt-0.5 shrink-0" />
-        Nominal = biaya tindakan × persentase tarif sesuai jabatan Anda pada tanggal tindakan.
+        Nominal = biaya tindakan × persentase tarif sesuai jabatan Anda pada
+        tanggal tindakan.
       </p>
 
       {/* Mobile: bilah klaim menempel di bawah */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-line bg-surface px-4 py-3 shadow-high md:hidden">
         <div>
-          <p className="text-[11px] text-ink-3">{selectedItems.length} perolehan dipilih</p>
-          <p className="font-bold tabular-nums">{formatRupiah(selectedTotal)}</p>
+          <p className="text-[11px] text-ink-3">
+            {selectedItems.length} perolehan dipilih
+          </p>
+          <p className="font-bold tabular-nums">
+            {formatRupiah(selectedTotal)}
+          </p>
         </div>
         {klaimButton("Klaim")}
       </div>

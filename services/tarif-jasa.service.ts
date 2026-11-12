@@ -4,7 +4,7 @@ import { ActionResponse } from "@/types/action";
 import type { JabatanJasa, TarifLayanan } from "@/types/jasa";
 import { handleServiceError } from "@/utils/error";
 import { mysqlTransaction } from "@/utils/mysql";
-import { hariIni } from "@/utils/format";
+import { hariIni } from "@/utils/date";
 import { sinkronPemasukanLayanan } from "./pemasukan-klinik.service";
 
 /**

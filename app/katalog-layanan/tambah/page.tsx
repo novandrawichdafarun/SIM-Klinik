@@ -1,10 +1,7 @@
 import { Suspense } from "react";
-import { requirePermissionPage } from "@/libs/authz";
-import { getPoliListService } from "@/services/karyawan.service";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
-import LayananForm from "@/components/katalog-layanan/LayananForm";
+import TambahLayananForm from "@/components/katalog-layanan/TambahLayananForm";
 
 export default function Page() {
   return (
@@ -27,16 +24,5 @@ export default function Page() {
         </Suspense>
       </main>
     </AppShell>
-  );
-}
-
-async function TambahLayananForm() {
-  await requirePermissionPage("katalog_layanan", "tambah");
-  const result = await getPoliListService();
-
-  return result.success ? (
-    <LayananForm poli={result.data ?? []} />
-  ) : (
-    <ErrorBox message={result.error} />
   );
 }

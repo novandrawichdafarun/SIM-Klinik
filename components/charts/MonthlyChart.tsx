@@ -2,7 +2,8 @@
 
 import { useId, useState } from "react";
 import type { NilaiBulanan } from "@/types/kinerja";
-import { formatDesimal, labelBulan } from "@/utils/format";
+import { formatDesimal } from "@/utils/format";
+import { labelBulan } from "@/utils/date";
 
 /**
  * Grafik bulanan satu seri (garis atau kolom) dalam SVG murni.
@@ -55,18 +56,27 @@ export default function MonthlyChart({
   const titleId = useId();
   const [hover, setHover] = useState<number | null>(null);
 
-  const values = data.map((d) => d.nilai).filter((v): v is number => v !== null);
-  const hasData = type === "bar" ? values.some((v) => v > 0) : values.length > 0;
+  const values = data
+    .map((d) => d.nilai)
+    .filter((v): v is number => v !== null);
+  const hasData =
+    type === "bar" ? values.some((v) => v > 0) : values.length > 0;
 
   const [yMin, yMax] =
-    yDomain ?? (type === "bar" ? [0, niceMax(Math.max(0, ...values))] : [0, Math.max(1, ...values)]);
+    yDomain ??
+    (type === "bar"
+      ? [0, niceMax(Math.max(0, ...values))]
+      : [0, Math.max(1, ...values)]);
   const ticks = [yMin, (yMin + yMax) / 2, yMax];
-  const fmt = (v: number) => (decimals > 0 ? formatDesimal(v, decimals) : v.toLocaleString("id-ID"));
+  const fmt = (v: number) =>
+    decimals > 0 ? formatDesimal(v, decimals) : v.toLocaleString("id-ID");
 
   const band = PLOT_W / Math.max(1, data.length);
   const xCenter = (i: number) => PAD.left + band * i + band / 2;
   const yScale = (v: number) =>
-    PAD.top + PLOT_H - ((Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin || 1)) * PLOT_H;
+    PAD.top +
+    PLOT_H -
+    ((Math.min(Math.max(v, yMin), yMax) - yMin) / (yMax - yMin || 1)) * PLOT_H;
   const baseline = PAD.top + PLOT_H;
   const barW = Math.min(24, band * 0.5);
 
@@ -85,9 +95,13 @@ export default function MonthlyChart({
     if (current) segments.push(current);
   }
 
-  const lastIndex = data.reduce((acc, d, i) => (d.nilai !== null ? i : acc), -1);
+  const lastIndex = data.reduce(
+    (acc, d, i) => (d.nilai !== null ? i : acc),
+    -1,
+  );
   const peakIndex = data.reduce(
-    (acc, d, i) => (d.nilai !== null && d.nilai > (data[acc]?.nilai ?? -Infinity) ? i : acc),
+    (acc, d, i) =>
+      d.nilai !== null && d.nilai > (data[acc]?.nilai ?? -Infinity) ? i : acc,
     -1,
   );
   const labelIndex = type === "line" ? lastIndex : peakIndex;
@@ -140,12 +154,18 @@ export default function MonthlyChart({
           </text>
         ))}
 
-        {hasData && type === "bar" &&
+        {hasData &&
+          type === "bar" &&
           data.map((d, i) =>
             d.nilai !== null && d.nilai > 0 ? (
               <path
                 key={d.bulan}
-                d={barPath(xCenter(i) - barW / 2, yScale(d.nilai), barW, baseline)}
+                d={barPath(
+                  xCenter(i) - barW / 2,
+                  yScale(d.nilai),
+                  barW,
+                  baseline,
+                )}
                 fill={COLOR}
                 opacity={hover === null || hover === i ? 1 : 0.55}
               />
@@ -231,7 +251,9 @@ export default function MonthlyChart({
           style={{ left: `${(xCenter(hover) / W) * 100}%` }}
         >
           {labelBulan(hovered.bulan)} {hovered.bulan.slice(0, 4)}:{" "}
-          <strong>{hovered.nilai === null ? "tidak ada data" : fmt(hovered.nilai)}</strong>
+          <strong>
+            {hovered.nilai === null ? "tidak ada data" : fmt(hovered.nilai)}
+          </strong>
         </div>
       )}
 

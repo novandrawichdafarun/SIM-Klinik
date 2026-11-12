@@ -1,28 +1,9 @@
 import { Suspense } from "react";
-import { getAkunByIdAction } from "@/actions/akun";
-import AkunForm from "@/components/akun/AkunForm";
 import AppShell from "@/components/layouts/AppShell";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import ErrorBox from "@/components/ui/ErrorBox";
+import UbahAkunForm from "@/components/akun/UbahAkunForm";
 
 export const metadata = { title: "Ubah Akun - ERM Klinik Pratama" };
-
-async function UbahAkunForm({
-  params,
-}: Pick<PageProps<"/akun/[id]/ubah">, "params">) {
-  const { id } = await params;
-  const result = await getAkunByIdAction(id);
-  if (!result.success || !result.data) {
-    return (
-      <ErrorBox
-        message={result.success ? "Akun tidak ditemukan." : result.error}
-      />
-    );
-  }
-  return (
-    <AkunForm mode="edit" akun={result.data.akun} isSelf={result.data.isSelf} />
-  );
-}
 
 export default function UbahAkunPage({ params }: PageProps<"/akun/[id]/ubah">) {
   return (
