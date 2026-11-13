@@ -10,6 +10,7 @@ import { clearDbSessionAction } from "@/actions/auth";
 import { getProfileAction } from "@/actions/profile";
 import type { UserProfile } from "@/types/profile";
 import { roleLabel } from "@/utils/format";
+import LanguageSwitcher from "../language/LanguageSwitcher";
 
 type ProfileState = {
   userId: string;
@@ -85,6 +86,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex items-center gap-3 lg:gap-4">
+        <LanguageSwitcher />
         <ThemeToggle />
         <span className="hidden h-8 border-l border-line sm:block" />
         <div className="hidden text-right text-[10px] font-semibold sm:block">

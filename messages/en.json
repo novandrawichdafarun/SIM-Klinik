@@ -1,0 +1,13 @@
+{
+  "Common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "language": "Language"
+  },
+  "Auth": {
+    "login": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "welcome": "Welcome, {name}!"
+  }
+}
