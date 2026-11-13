@@ -195,7 +195,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
 export default function Sidebar({ menuOpen, onClose }: { menuOpen: boolean; onClose: () => void }) {
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-20 hidden w-55 border-r border-line bg-surface lg:block">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-55 border-r border-line bg-surface lg:block print:hidden">
         <div className="flex h-16.5 items-center border-b border-line px-4">
           <Brand />
         </div>
