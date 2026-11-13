@@ -20,16 +20,14 @@ export default async function LaporanLayananContent({ searchParams }: Props) {
   return (
     <AppShell>
       <main className="px-4 py-4.5 md:px-6 md:py-6">
-        <div className="print-hidden">
-          <Breadcrumb
-            items={[
-              { label: "Beranda", href: "/dashboard" },
-              { label: "Laporan Layanan" },
-            ]}
-          />
-          <h1 className="text-[25px] font-bold">Laporan Layanan</h1>
-        </div>
-        <p className="print-hidden mb-5 text-xs text-ink-3">
+        <Breadcrumb
+          items={[
+            { label: "Beranda", href: "/dashboard" },
+            { label: "Laporan Layanan" },
+          ]}
+        />
+        <h1 className="text-[25px] font-bold">Laporan Layanan</h1>
+        <p className="mb-5 text-xs text-ink-3">
           Rekap kinerja dan pendapatan layanan berdasarkan periode dan poli.
         </p>
         {result.success && result.data ? (

@@ -11,7 +11,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background font-sans text-ink">
       <Sidebar menuOpen={menuOpen} onClose={() => setMenuOpen(false)} />
 
-      <div className="lg:ml-55 print:ml-0">
+      <div className="lg:ml-55">
         <Header onMenuClick={() => setMenuOpen(true)} />
         {children}
       </div>

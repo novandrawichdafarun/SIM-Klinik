@@ -71,7 +71,7 @@ export default function Header({ onMenuClick }: { onMenuClick: () => void }) {
   }
 
   return (
-    <header className="flex h-16.5 items-center justify-between border-b border-line bg-surface px-4 lg:justify-end lg:px-6 print:hidden">
+    <header className="flex h-16.5 items-center justify-between border-b border-line bg-surface px-4 lg:justify-end lg:px-6">
       <button
         aria-label="Buka menu"
         className="text-ink lg:hidden"
