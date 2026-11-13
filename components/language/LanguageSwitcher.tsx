@@ -55,7 +55,7 @@ export default function LanguageSwitcher() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label="Ganti bahasa / Change language"
-        className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+        className="inline-flex h-8 items-center gap-2 rounded-lg border border-line text-ink-2 px-3 text-sm font-medium transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 disabled:opacity-60"
       >
         <Globe className="h-4 w-4" />
         <span className="hidden sm:inline">{languages[locale].name}</span>
@@ -70,7 +70,7 @@ export default function LanguageSwitcher() {
       {open && (
         <ul
           role="listbox"
-          className="absolute right-0 z-50 mt-2 w-44 rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-white/10 dark:bg-slate-900"
+          className="absolute right-0 z-50 mt-2 w-44 rounded-xl border border-line p-1 shadow-lg bg-surface"
         >
           {locales.map((l) => {
             const active = l === locale;
