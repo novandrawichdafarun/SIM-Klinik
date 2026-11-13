@@ -157,6 +157,60 @@ h6 {
   box-shadow: var(--shadow-high);
 }
 
+.print-report-header {
+  display: none;
+}
+
+.print-report-footer {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .print-hidden {
+    display: none !important;
+  }
+
+  .print-report-header {
+    display: block;
+    border-bottom: 2px solid #111827;
+    padding-bottom: 12px;
+  }
+
+  .print-report-footer {
+    display: block;
+    border-top: 1px solid #9ca3af;
+    color: #4b5563;
+    font-size: 8pt;
+    margin-top: 14mm;
+    padding-top: 5px;
+    text-align: right;
+  }
+
+  .report-page {
+    width: 100%;
+    max-width: none;
+    color: #111827;
+  }
+
+  .report-table {
+    break-inside: auto;
+  }
+
+  .report-table tr {
+    break-inside: avoid;
+  }
+}
+
 /* ---------------- Feedback: toast & dialog konfirmasi ---------------- */
 @keyframes toast-masuk {
   from {
